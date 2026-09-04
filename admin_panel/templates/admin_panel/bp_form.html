@@ -1,0 +1,490 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_create %}Add Business Partner{% else %}Edit Business Partner: {{ bp.company_name }}{% endif %} — Leads Management CRM{% endblock %}
+
+{% block header_left %}
+<div class="flex items-center gap-3">
+    <a href="{% url 'admin_panel:dashboard' %}" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-border flex items-center justify-center text-slate-500 dark:text-navy-muted hover:text-slate-900 dark:text-white hover:border-navy-cyan transition-all shadow-sm group" title="Return to Dashboard">
+        <iconify-icon icon="lucide:arrow-left" class="text-sm group-hover:-translate-x-0.5 transition-transform"></iconify-icon>
+    </a>
+    <div>
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-500 dark:text-navy-muted">Dashboard</span>
+            <span class="text-xs text-slate-500 dark:text-navy-muted">/</span>
+            <h1 class="font-display text-sm font-bold text-slate-900 dark:text-white tracking-tight">
+                {% if is_create %}Add New Business Partner{% else %}Edit Business Partner: {{ bp.company_name }}{% endif %}
+            </h1>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block header_right %}
+<div class="flex items-center gap-3">
+    <button type="button" onclick="toggleTheme()" 
+        class="p-2 rounded-xl border border-slate-200 dark:border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800/80 hover:bg-slate-200 dark:hover:bg-navy-800 text-slate-600 dark:text-navy-cyan transition-all shadow-sm flex items-center justify-center group active:scale-95" 
+        title="Toggle Light / Dark theme">
+        <iconify-icon icon="lucide:sun" class="text-base hidden dark:inline text-amber-400 group-hover:rotate-45 transition-transform duration-300"></iconify-icon>
+        <iconify-icon icon="lucide:moon" class="text-base inline dark:hidden text-indigo-600 group-hover:-rotate-12 transition-transform duration-300"></iconify-icon>
+    </button>
+    <a href="{% url 'admin_panel:dashboard' %}" class="px-3.5 py-1.5 bg-slate-100 dark:bg-navy-800 hover:bg-slate-200 dark:hover:bg-navy-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-navy-border rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+    <iconify-icon icon="lucide:arrow-left" class="text-xs"></iconify-icon>
+    <span>Back to Dashboard</span>
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+<!-- Page Intro Banner -->
+                    <div class="bg-slate-50 dark:bg-[#161730] border border-slate-200 dark:border-navy-border rounded-2xl p-5 flex items-center justify-between shadow-lg">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-11 h-11 rounded-xl bg-navy-cyan/15 border border-navy-cyan/30 flex items-center justify-center text-navy-cyan shadow-[0_0_12px_rgba(0,210,255,0.2)]">
+                                <iconify-icon icon="{% if is_create %}lucide:user-plus{% else %}lucide:user-check{% endif %}" class="text-xl"></iconify-icon>
+                            </div>
+                            <div>
+                                <h2 class="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
+                                    {% if is_create %}Register New Business Partner{% else %}Update Partner Configuration{% endif %}
+                                </h2>
+                                <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">Configure authentication credentials, company profile, and ElevenLabs API quota sync.</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-mono font-bold text-navy-cyan bg-cyan-50 dark:bg-[#141d3b] border border-navy-cyan/40 px-2 py-1 rounded-md">
+                            Super Admin Zone
+                        </span>
+                    </div>
+
+                    <!-- Form Card -->
+                    <div class="bg-white dark:bg-[#161730] border border-slate-200 dark:border-navy-border rounded-2xl p-7 shadow-sm transition-colors duration-150">
+                        <form method="post" enctype="multipart/form-data" id="bpForm" novalidate class="space-y-6">
+                            {% csrf_token %}
+
+                            <div id="formValidationSummary" class="{% if not form.errors %}hidden{% endif %} p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5">
+                                <iconify-icon icon="lucide:alert-circle" class="text-base flex-shrink-0 text-rose-400"></iconify-icon>
+                                <span>Please resolve the highlighted field errors below to continue.</span>
+                            </div>
+
+                            {% if form.non_field_errors %}
+                            <div class="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2.5">
+                                <iconify-icon icon="lucide:alert-circle" class="text-base flex-shrink-0 mt-0.5 text-rose-400"></iconify-icon>
+                                <div>{{ form.non_field_errors }}</div>
+                            </div>
+                            {% endif %}
+
+                            {% if is_create %}
+                            <!-- Account Credentials Section -->
+                            <div class="space-y-3 pb-6 border-b border-slate-200 dark:border-navy-border">
+                                <h3 class="text-xs font-bold text-navy-cyan uppercase tracking-wider flex items-center gap-2">
+                                    <iconify-icon icon="lucide:shield" class="text-navy-cyan"></iconify-icon>
+                                    Partner Portal Credentials
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="{{ form.username.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Username *</label>
+                                        <input type="text" name="username" id="{{ form.username.id_for_label }}"
+                                            value="{{ form.username.value|default:'' }}"
+                                            placeholder="e.g. acme_partner"
+                                            class="w-full bg-slate-50 dark:bg-[#111224] border {% if form.username.errors %}border-rose-500 bg-rose-500/5{% else %}border-slate-200 dark:border-navy-border{% endif %} rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-navy-cyan focus:ring-1 focus:ring-navy-cyan/30 transition-all">
+                                        <div id="err-{{ form.username.id_for_label }}" class="field-error text-[11px] text-rose-400 mt-1 flex items-center gap-1 {% if not form.username.errors %}hidden{% endif %}">
+                                            <iconify-icon icon="lucide:alert-circle" class="flex-shrink-0"></iconify-icon>
+                                            <span class="err-text">{{ form.username.errors.0|default:'' }}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <div class="flex items-center justify-between mb-1.5">
+                                            <label for="{{ form.temp_password.id_for_label }}" class="text-xs font-semibold text-slate-700 dark:text-slate-300">Temporary Password *</label>
+                                            <button type="button" onclick="generateRandomPassword()" class="text-[10px] text-navy-cyan hover:underline font-medium flex items-center gap-1">
+                                                <iconify-icon icon="lucide:refresh-cw" class="text-[10px]"></iconify-icon> Auto-generate
+                                            </button>
+                                        </div>
+                                        <div class="relative">
+                                            <input type="password" name="temp_password" id="{{ form.temp_password.id_for_label }}"
+                                                placeholder="Minimum 8 characters"
+                                                class="w-full bg-slate-50 dark:bg-[#111224] border {% if form.temp_password.errors %}border-rose-500 bg-rose-500/5{% else %}border-slate-200 dark:border-navy-border{% endif %} rounded-xl px-3.5 py-2.5 pr-10 text-xs text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-navy-cyan focus:ring-1 focus:ring-navy-cyan/30 transition-all">
+                                            <button type="button" onclick="togglePassVisibility('{{ form.temp_password.id_for_label }}', this)" 
+                                                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 dark:text-white transition-colors focus:outline-none">
+                                                <iconify-icon icon="lucide:eye" class="text-sm"></iconify-icon>
+                                            </button>
+                                        </div>
+                                        {% if form.temp_password.help_text %}<p class="text-[10px] text-slate-500 dark:text-navy-muted mt-1 font-mono">{{ form.temp_password.help_text }}</p>{% endif %}
+                                        <div id="err-{{ form.temp_password.id_for_label }}" class="field-error text-[11px] text-rose-400 mt-1 flex items-center gap-1 {% if not form.temp_password.errors %}hidden{% endif %}">
+                                            <iconify-icon icon="lucide:alert-circle" class="flex-shrink-0"></iconify-icon>
+                                            <span class="err-text">{{ form.temp_password.errors.0|default:'' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Company Information Section -->
+                            <div class="space-y-3 pb-6 border-b border-slate-200 dark:border-navy-border">
+                                <h3 class="text-xs font-bold text-navy-cyan uppercase tracking-wider flex items-center gap-2">
+                                    <iconify-icon icon="lucide:building-2" class="text-navy-cyan"></iconify-icon>
+                                    Company Information
+                                </h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="{{ form.company_name.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Company Name *</label>
+                                        <input type="text" name="company_name" id="{{ form.company_name.id_for_label }}"
+                                            value="{{ form.company_name.value|default:'' }}"
+                                            placeholder="e.g. Acme Corporation"
+                                            class="w-full bg-slate-50 dark:bg-[#111224] border {% if form.company_name.errors %}border-rose-500 bg-rose-500/5{% else %}border-slate-200 dark:border-navy-border{% endif %} rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-navy-cyan focus:ring-1 focus:ring-navy-cyan/30 transition-all">
+                                        <div id="err-{{ form.company_name.id_for_label }}" class="field-error text-[11px] text-rose-400 mt-1 flex items-center gap-1 {% if not form.company_name.errors %}hidden{% endif %}">
+                                            <iconify-icon icon="lucide:alert-circle" class="flex-shrink-0"></iconify-icon>
+                                            <span class="err-text">{{ form.company_name.errors.0|default:'' }}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="{{ form.contact_person.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Contact Person *</label>
+                                        <input type="text" name="contact_person" id="{{ form.contact_person.id_for_label }}"
+                                            value="{{ form.contact_person.value|default:'' }}"
+                                            placeholder="e.g. John Doe"
+                                            class="w-full bg-slate-50 dark:bg-[#111224] border {% if form.contact_person.errors %}border-rose-500 bg-rose-500/5{% else %}border-slate-200 dark:border-navy-border{% endif %} rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-navy-cyan focus:ring-1 focus:ring-navy-cyan/30 transition-all">
+                                        <div id="err-{{ form.contact_person.id_for_label }}" class="field-error text-[11px] text-rose-400 mt-1 flex items-center gap-1 {% if not form.contact_person.errors %}hidden{% endif %}">
+                                            <iconify-icon icon="lucide:alert-circle" class="flex-shrink-0"></iconify-icon>
+                                            <span class="err-text">{{ form.contact_person.errors.0|default:'' }}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="{{ form.email.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Email Address *</label>
+                                        <input type="email" name="email" id="{{ form.email.id_for_label }}"
+                                            value="{{ form.email.value|default:'' }}"
+                                            placeholder="partner@company.com"
+                                            class="w-full bg-slate-50 dark:bg-[#111224] border {% if form.email.errors %}border-rose-500 bg-rose-500/5{% else %}border-slate-200 dark:border-navy-border{% endif %} rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-navy-cyan focus:ring-1 focus:ring-navy-cyan/30 transition-all">
+                                        <div id="err-{{ form.email.id_for_label }}" class="field-error text-[11px] text-rose-400 mt-1 flex items-center gap-1 {% if not form.email.errors %}hidden{% endif %}">
+                                            <iconify-icon icon="lucide:alert-circle" class="flex-shrink-0"></iconify-icon>
+                                            <span class="err-text">{{ form.email.errors.0|default:'' }}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="{{ form.phone.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Phone Number</label>
+                                        <input type="tel" name="phone" id="{{ form.phone.id_for_label }}"
+                                            value="{{ form.phone.value|default:'' }}"
+                                            placeholder="+1 (555) 000-0000"
+                                            class="w-full bg-slate-50 dark:bg-[#111224] border {% if form.phone.errors %}border-rose-500 bg-rose-500/5{% else %}border-slate-200 dark:border-navy-border{% endif %} rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-navy-cyan focus:ring-1 focus:ring-navy-cyan/30 transition-all">
+                                        <div id="err-{{ form.phone.id_for_label }}" class="field-error text-[11px] text-rose-400 mt-1 flex items-center gap-1 {% if not form.phone.errors %}hidden{% endif %}">
+                                            <iconify-icon icon="lucide:alert-circle" class="flex-shrink-0"></iconify-icon>
+                                            <span class="err-text">{{ form.phone.errors.0|default:'' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label for="{{ form.address.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Office Address</label>
+                                    <textarea name="address" id="{{ form.address.id_for_label }}" rows="2"
+                                        placeholder="Physical or mailing address..."
+                                        class="w-full bg-slate-50 dark:bg-[#111224] border border-slate-200 dark:border-navy-border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:border-navy-cyan focus:ring-1 focus:ring-navy-cyan/30 transition-all">{{ form.address.value|default:'' }}</textarea>
+                                </div>
+
+                                <div>
+                                    <label for="{{ form.logo.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Company Logo (Optional)</label>
+                                    <input type="file" name="logo" id="{{ form.logo.id_for_label }}"
+                                        class="w-full bg-slate-50 dark:bg-[#111224] border border-slate-200 dark:border-navy-border rounded-xl p-2 text-xs text-slate-500 dark:text-navy-muted file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:bg-navy-cyan file:text-navy-950 hover:file:bg-cyan-400 font-medium cursor-pointer">
+                                    {% if not is_create and bp.logo %}
+                                    <div class="mt-2 flex items-center gap-2.5 p-2 bg-slate-50 dark:bg-[#111224] rounded-xl border border-slate-200 dark:border-navy-border w-fit">
+                                        <img src="{{ bp.logo.url }}" alt="Logo preview" class="w-8 h-8 rounded-lg object-cover border border-white/10">
+                                        <span class="text-[11px] text-slate-500 dark:text-navy-muted">Current logo attached</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- ElevenLabs API Integration Section -->
+                            <div class="space-y-4">
+                                <h3 class="text-xs font-bold text-navy-cyan uppercase tracking-wider flex items-center gap-2">
+                                    <iconify-icon icon="lucide:cpu" class="text-navy-cyan"></iconify-icon>
+                                    ElevenLabs API Configuration
+                                </h3>
+
+                                <div>
+                                    <label for="{{ form.elevenlabs_api_key.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">ElevenLabs xi-api-key</label>
+                                    <div class="relative">
+                                        <input type="password" name="elevenlabs_api_key" id="{{ form.elevenlabs_api_key.id_for_label }}"
+                                            value="{{ form.elevenlabs_api_key.value|default:'' }}"
+                                            placeholder="Paste partner's xi-api-key here..."
+                                            class="w-full bg-slate-50 dark:bg-[#111224] border {% if form.elevenlabs_api_key.errors %}border-rose-500 bg-rose-500/5{% else %}border-slate-200 dark:border-navy-border{% endif %} rounded-xl px-3.5 py-2.5 pr-20 text-xs text-slate-900 dark:text-white font-mono placeholder-slate-500 focus:outline-none focus:border-navy-cyan focus:ring-1 focus:ring-navy-cyan/30 transition-all">
+                                        <button type="button" id="toggleApiKey" class="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 text-[10px] font-bold bg-slate-100 dark:bg-navy-800 hover:bg-slate-200 dark:hover:bg-navy-700 text-navy-cyan rounded-lg border border-slate-200 dark:border-navy-border transition-colors">Show</button>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 dark:text-navy-muted mt-1">Used to sync live subscription quotas, character consumption, and available voices.</p>
+                                    <div id="err-{{ form.elevenlabs_api_key.id_for_label }}" class="field-error text-[11px] text-rose-400 mt-1 flex items-center gap-1 {% if not form.elevenlabs_api_key.errors %}hidden{% endif %}">
+                                        <iconify-icon icon="lucide:alert-circle" class="flex-shrink-0"></iconify-icon>
+                                        <span class="err-text">{{ form.elevenlabs_api_key.errors.0|default:'' }}</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label for="{{ form.credit_alert_threshold.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Credit Limit *</label>
+                                    <div class="flex items-center gap-3">
+                                        <input type="number" name="credit_alert_threshold" id="{{ form.credit_alert_threshold.id_for_label }}" min="1" step="1"
+                                            value="{{ form.credit_alert_threshold.value|default:1000 }}"
+                                            class="w-32 bg-slate-50 dark:bg-[#111224] border {% if form.credit_alert_threshold.errors %}border-rose-500 bg-rose-500/5{% else %}border-slate-200 dark:border-navy-border{% endif %} rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-navy-cyan focus:ring-1 focus:ring-navy-cyan/30 transition-all text-center">
+                                        <span class="text-xs text-slate-500 dark:text-navy-muted">Default threshold set to 1,000 credits for partner quota alerts</span>
+                                    </div>
+                                    <div id="err-{{ form.credit_alert_threshold.id_for_label }}" class="field-error text-[11px] text-rose-400 mt-1 flex items-center gap-1 {% if not form.credit_alert_threshold.errors %}hidden{% endif %}">
+                                        <iconify-icon icon="lucide:alert-circle" class="flex-shrink-0"></iconify-icon>
+                                        <span class="err-text">{{ form.credit_alert_threshold.errors.0|default:'' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Submit / Cancel Action Buttons -->
+                            <div class="pt-5 border-t border-slate-200 dark:border-navy-border flex items-center justify-end gap-3">
+                                <a href="{% url 'admin_panel:dashboard' %}" class="px-4 py-2.5 bg-slate-50 dark:bg-[#111224] hover:bg-navy-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:text-white rounded-xl text-xs font-semibold transition-colors border border-slate-200 dark:border-navy-border">
+                                    Cancel
+                                </a>
+                                <button type="submit" id="submitBtn" class="px-5 py-2.5 bg-gradient-to-r from-[#00d2ff] to-[#0088ff] hover:from-[#33dcff] hover:to-[#1aa0ff] text-slate-950 font-bold rounded-xl text-xs shadow-[0_0_18px_rgba(0,210,255,0.25)] hover:shadow-[0_0_22px_rgba(0,210,255,0.4)] transition-all flex items-center gap-1.5 active:scale-[0.99]">
+                                    <iconify-icon icon="lucide:check" class="text-sm"></iconify-icon>
+                                    <span>{% if is_create %}Register Business Partner{% else %}Save Partner Changes{% endif %}</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Scripts for Password, API Key & Inline Validation -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const apiKeyInput = document.getElementById('{{ form.elevenlabs_api_key.id_for_label }}');
+            const toggleBtn = document.getElementById('toggleApiKey');
+            if (apiKeyInput && toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    if (apiKeyInput.type === 'password') {
+                        apiKeyInput.type = 'text';
+                        toggleBtn.innerText = 'Hide';
+                    } else {
+                        apiKeyInput.type = 'password';
+                        toggleBtn.innerText = 'Show';
+                    }
+                });
+            }
+
+            // Inline Form Validation
+            const form = document.getElementById('bpForm');
+            if (!form) return;
+
+            const isCreate = {% if is_create %}true{% else %}false{% endif %};
+
+            function showFieldError(fieldId, message) {
+                const input = document.getElementById(fieldId);
+                const errDiv = document.getElementById('err-' + fieldId);
+                if (input) {
+                    input.classList.add('border-rose-500', 'bg-rose-500/5');
+                    input.classList.remove('border-slate-200 dark:border-navy-border');
+                }
+                if (errDiv) {
+                    const textSpan = errDiv.querySelector('.err-text');
+                    if (textSpan) textSpan.textContent = message;
+                    errDiv.classList.remove('hidden');
+                }
+            }
+
+            function clearFieldError(fieldId) {
+                const input = document.getElementById(fieldId);
+                const errDiv = document.getElementById('err-' + fieldId);
+                if (input) {
+                    input.classList.remove('border-rose-500', 'bg-rose-500/5');
+                    input.classList.add('border-slate-200 dark:border-navy-border');
+                }
+                if (errDiv) {
+                    errDiv.classList.add('hidden');
+                    const textSpan = errDiv.querySelector('.err-text');
+                    if (textSpan) textSpan.textContent = '';
+                }
+            }
+
+            function validateAll() {
+                let isValid = true;
+                let firstInvalidEl = null;
+
+                // 1. Username (if create)
+                if (isCreate) {
+                    const uId = '{{ form.username.id_for_label }}';
+                    const uEl = document.getElementById(uId);
+                    if (uEl) {
+                        const val = uEl.value.trim();
+                        if (!val) {
+                            showFieldError(uId, 'Username is required.');
+                            isValid = false;
+                            if (!firstInvalidEl) firstInvalidEl = uEl;
+                        } else if (val.length < 3) {
+                            showFieldError(uId, 'Username must be at least 3 characters long.');
+                            isValid = false;
+                            if (!firstInvalidEl) firstInvalidEl = uEl;
+                        } else if (/\s/.test(val)) {
+                            showFieldError(uId, 'Username cannot contain spaces.');
+                            isValid = false;
+                            if (!firstInvalidEl) firstInvalidEl = uEl;
+                        } else {
+                            clearFieldError(uId);
+                        }
+                    }
+
+                    // 2. Temp Password (if create)
+                    const pId = '{{ form.temp_password.id_for_label }}';
+                    const pEl = document.getElementById(pId);
+                    if (pEl) {
+                        const val = pEl.value;
+                        if (!val) {
+                            showFieldError(pId, 'Temporary password is required.');
+                            isValid = false;
+                            if (!firstInvalidEl) firstInvalidEl = pEl;
+                        } else if (val.length < 8) {
+                            showFieldError(pId, 'Temporary password must be at least 8 characters long.');
+                            isValid = false;
+                            if (!firstInvalidEl) firstInvalidEl = pEl;
+                        } else {
+                            clearFieldError(pId);
+                        }
+                    }
+                }
+
+                // 3. Company Name
+                const cId = '{{ form.company_name.id_for_label }}';
+                const cEl = document.getElementById(cId);
+                if (cEl) {
+                    const val = cEl.value.trim();
+                    if (!val) {
+                        showFieldError(cId, 'Company name is required.');
+                        isValid = false;
+                        if (!firstInvalidEl) firstInvalidEl = cEl;
+                    } else if (val.length < 2) {
+                        showFieldError(cId, 'Company name must be at least 2 characters.');
+                        isValid = false;
+                        if (!firstInvalidEl) firstInvalidEl = cEl;
+                    } else {
+                        clearFieldError(cId);
+                    }
+                }
+
+                // 4. Contact Person
+                const cpId = '{{ form.contact_person.id_for_label }}';
+                const cpEl = document.getElementById(cpId);
+                if (cpEl) {
+                    const val = cpEl.value.trim();
+                    if (!val) {
+                        showFieldError(cpId, 'Contact person name is required.');
+                        isValid = false;
+                        if (!firstInvalidEl) firstInvalidEl = cpEl;
+                    } else if (val.length < 2) {
+                        showFieldError(cpId, 'Contact person name must be at least 2 characters.');
+                        isValid = false;
+                        if (!firstInvalidEl) firstInvalidEl = cpEl;
+                    } else {
+                        clearFieldError(cpId);
+                    }
+                }
+
+                // 5. Email Address
+                const eId = '{{ form.email.id_for_label }}';
+                const eEl = document.getElementById(eId);
+                if (eEl) {
+                    const val = eEl.value.trim();
+                    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!val) {
+                        showFieldError(eId, 'Email address is required.');
+                        isValid = false;
+                        if (!firstInvalidEl) firstInvalidEl = eEl;
+                    } else if (!emailPattern.test(val)) {
+                        showFieldError(eId, 'Please enter a valid email address (e.g. name@company.com).');
+                        isValid = false;
+                        if (!firstInvalidEl) firstInvalidEl = eEl;
+                    } else {
+                        clearFieldError(eId);
+                    }
+                }
+
+                // 6. Credit Limit
+                const tId = '{{ form.credit_alert_threshold.id_for_label }}';
+                const tEl = document.getElementById(tId);
+                if (tEl) {
+                    const val = parseFloat(tEl.value);
+                    if (isNaN(val) || val < 1) {
+                        showFieldError(tId, 'Credit limit must be at least 1 credit.');
+                        isValid = false;
+                        if (!firstInvalidEl) firstInvalidEl = tEl;
+                    } else {
+                        clearFieldError(tId);
+                    }
+                }
+
+                const summary = document.getElementById('formValidationSummary');
+                if (!isValid) {
+                    if (summary) summary.classList.remove('hidden');
+                    if (firstInvalidEl) {
+                        firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        firstInvalidEl.focus();
+                    }
+                } else {
+                    if (summary) summary.classList.add('hidden');
+                }
+
+                return isValid;
+            }
+
+            // Real-time input listeners to clear errors on typing
+            const fieldsToWatch = [
+                '{{ form.username.id_for_label }}',
+                '{{ form.temp_password.id_for_label }}',
+                '{{ form.company_name.id_for_label }}',
+                '{{ form.contact_person.id_for_label }}',
+                '{{ form.email.id_for_label }}',
+                '{{ form.credit_alert_threshold.id_for_label }}'
+            ];
+
+            fieldsToWatch.forEach(function(fieldId) {
+                if (!fieldId) return;
+                const el = document.getElementById(fieldId);
+                if (el) {
+                    el.addEventListener('input', function() {
+                        clearFieldError(fieldId);
+                        const summary = document.getElementById('formValidationSummary');
+                        const remainingErrors = form.querySelectorAll('.field-error:not(.hidden)');
+                        if (remainingErrors.length === 0 && summary) {
+                            summary.classList.add('hidden');
+                        }
+                    });
+                }
+            });
+
+            form.addEventListener('submit', function(e) {
+                if (!validateAll()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+        });
+
+        function togglePassVisibility(fieldId, button) {
+            const input = document.getElementById(fieldId);
+            if (!input) return;
+            const icon = button.querySelector('iconify-icon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (icon) icon.setAttribute('icon', 'lucide:eye-off');
+            } else {
+                input.type = 'password';
+                if (icon) icon.setAttribute('icon', 'lucide:eye');
+            }
+        }
+
+        function generateRandomPassword() {
+            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*";
+            let pass = "";
+            for (let i = 0; i < 12; i++) {
+                pass += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            const passInput = document.getElementById('{{ form.temp_password.id_for_label }}');
+            if (passInput) {
+                passInput.value = pass;
+                passInput.type = 'text';
+                const passId = '{{ form.temp_password.id_for_label }}';
+                passInput.classList.remove('border-rose-500', 'bg-rose-500/5');
+                passInput.classList.add('border-slate-200 dark:border-navy-border');
+                const errDiv = document.getElementById('err-' + passId);
+                if (errDiv) errDiv.classList.add('hidden');
+            }
+        }
+    </script>
+{% endblock %}

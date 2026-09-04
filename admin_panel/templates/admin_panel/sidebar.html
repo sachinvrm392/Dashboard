@@ -1,0 +1,101 @@
+<!-- Left Sidebar (Dashboard, Business Partners, Add BP, and User Profile) -->
+<aside class="w-[250px] flex flex-col border-r border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] flex-shrink-0 z-20 select-none h-screen sticky top-0 transition-colors duration-150">
+    <!-- Brand -->
+    <div class="h-16 flex items-center px-4 border-b border-slate-200 dark:border-navy-border group cursor-pointer select-none">
+        <a href="{% url 'admin_panel:dashboard' %}" class="flex items-center justify-between w-full">
+            <!-- Title Text -->
+            <div class="flex flex-col">
+                <span class="font-sans text-[13.5px] font-extrabold tracking-wider uppercase bg-gradient-to-r from-slate-900 dark:from-white from-30% via-cyan-600 dark:via-[#6de2ff] to-[#00d2ff] bg-clip-text text-transparent group-hover:brightness-110 transition-all leading-tight select-none drop-shadow-[0_2px_8px_rgba(0,210,255,0.15)]">
+                    Leads Management
+                </span>
+            </div>
+
+            <!-- CRM Badge -->
+            <span class="text-[10px] font-mono font-bold text-cyan-600 dark:text-navy-cyan bg-cyan-500/10 dark:bg-[#141d3b] border border-cyan-500/30 dark:border-navy-cyan/40 px-2 py-0.5 rounded-md shadow-[0_0_8px_rgba(0,210,255,0.15)] tracking-wider">
+                CRM
+            </span>
+        </a>
+    </div>
+
+    <!-- Profile Summary Pill -->
+    <div class="p-3">
+        <a href="{% url 'admin_panel:profile' %}" class="block p-2.5 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800/80 hover:bg-slate-100 dark:hover:bg-navy-800 shadow-sm transition-all group">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2 truncate">
+                    <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-cyan-500 via-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm group-hover:ring-2 group-hover:ring-cyan-400 transition-all">
+                        {{ request.user.username|slice:":1"|upper }}
+                    </div>
+                    <div class="truncate text-left">
+                        <span class="text-xs font-semibold text-slate-800 dark:text-white block truncate group-hover:text-cyan-600 dark:group-hover:text-navy-cyan transition-colors">{{ request.user.username }}</span>
+                        <span class="text-[10px] text-slate-500 dark:text-navy-muted block">Super Admin</span>
+                    </div>
+                </div>
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Connected"></span>
+            </div>
+        </a>
+    </div>
+
+    <!-- Navigation Links -->
+    <div class="flex-1 px-3 space-y-1.5 overflow-y-auto py-2">
+        <div class="px-2 pt-1 pb-1 text-[10px] font-bold text-slate-400 dark:text-navy-muted uppercase tracking-wider">
+            Main Menu
+        </div>
+
+        <!-- Dashboard Menu Link -->
+        <a href="{% url 'admin_panel:dashboard' %}" 
+            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'dashboard' or active_nav == 'dashboard' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-all shadow-sm">
+            <div class="flex items-center gap-2.5">
+                <iconify-icon icon="lucide:layout-dashboard" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                <span>Dashboard</span>
+            </div>
+        </a>
+
+        <!-- Business Partners Menu Link -->
+        <a href="{% url 'admin_panel:bp_list' %}" 
+            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'bp_list' or request.resolver_match.url_name == 'bp_detail' or active_nav == 'partners' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-all">
+            <div class="flex items-center gap-2.5">
+                <iconify-icon icon="lucide:users" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                <span>Business Partners</span>
+            </div>
+            <span class="bg-cyan-500/10 dark:bg-navy-cyan/20 border border-cyan-500/30 dark:border-navy-cyan/40 text-cyan-600 dark:text-navy-cyan text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">{{ total_bps|default:"0" }}</span>
+        </a>
+
+        <!-- Add Business Partner Menu Item -->
+        <a href="{% url 'admin_panel:bp_create' %}" 
+            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'bp_create' or active_nav == 'add_bp' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-all">
+            <div class="flex items-center gap-2.5">
+                <iconify-icon icon="lucide:user-plus" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                <span>Add Business Partner</span>
+            </div>
+            <iconify-icon icon="lucide:plus" class="text-xs text-slate-400 dark:text-navy-muted"></iconify-icon>
+        </a>
+
+        <!-- User Profile Menu Link -->
+        <a href="{% url 'admin_panel:profile' %}" 
+            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'profile' or active_nav == 'profile' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-colors">
+            <div class="flex items-center gap-2.5">
+                <iconify-icon icon="lucide:user-cog" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                <span>User Profile</span>
+            </div>
+            <span class="text-[10px] text-slate-400 dark:text-navy-muted font-mono">Edit</span>
+        </a>
+    </div>
+
+    <!-- Bottom Actions -->
+    <div class="p-3 border-t border-slate-200 dark:border-navy-border bg-slate-50/60 dark:bg-[#161730]">
+        <div class="flex items-center justify-between px-2 py-1.5 text-xs text-slate-500 dark:text-navy-muted">
+            <div class="flex items-center gap-2 truncate">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span class="truncate font-medium text-slate-700 dark:text-slate-300">Live API Sync</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'accounts:change_password' %}" class="text-slate-400 dark:text-navy-muted hover:text-cyan-600 dark:hover:text-navy-cyan transition-colors" title="Change Password">
+                    <iconify-icon icon="lucide:key-round" class="text-sm"></iconify-icon>
+                </a>
+                <a href="{% url 'accounts:logout' %}" class="text-slate-400 dark:text-navy-muted hover:text-rose-500 dark:hover:text-rose-400 transition-colors" title="Sign out">
+                    <iconify-icon icon="lucide:log-out" class="text-base"></iconify-icon>
+                </a>
+            </div>
+        </div>
+    </div>
+</aside>

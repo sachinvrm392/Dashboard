@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Leads Management CRM{% endblock %}</title>
+
+    <!-- FOUC prevention: immediately apply theme class before render -->
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('crm_theme') || 'dark';
+                if (savedTheme === 'light') {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.classList.add('light');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.classList.remove('light');
+                }
+            } catch (e) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
+
+    <!-- Tailwind CSS & Iconify -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        navy: {
+                            950: '#111224',
+                            900: '#161730',
+                            800: '#1c1e3d',
+                            cyan: '#00d2ff',
+                            border: 'rgba(255, 255, 255, 0.08)',
+                            muted: '#8e94b2',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.contains('dark');
+            const newTheme = isDark ? 'light' : 'dark';
+            if (isDark) {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+            } else {
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+            }
+            try {
+                localStorage.setItem('crm_theme', newTheme);
+            } catch (e) {}
+            window.dispatchEvent(new CustomEvent('themechange', { detail: { theme: newTheme } }));
+        }
+    </script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-slate-50 dark:bg-[#111224] text-slate-800 dark:text-slate-100 antialiased font-sans overflow-hidden h-screen transition-colors duration-150">
+    <div class="flex h-screen w-full overflow-hidden">
+        
+        {% if user.is_authenticated and not hide_sidebar %}
+            <!-- Left Sidebar Panel -->
+            {% include 'admin_panel/sidebar.html' %}
+        {% endif %}
+
+        <!-- Main Viewport -->
+        <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50 dark:bg-[#111224] transition-colors duration-150">
+            
+            {% include 'admin_panel/header.html' %} 
+
+            <!-- Middle Content Area (Dynamically Rendered) -->
+            <div class="flex-1 overflow-y-auto flex flex-col justify-between">
+                <div class="p-6 md:p-8 space-y-6 flex-1">
+                    <!-- Django Messages Framework Notification -->
+                    {% if messages %}
+                    <div class="space-y-2">
+                        {% for message in messages %}
+                        <div class="p-3.5 rounded-xl border flex items-center justify-between text-xs {% if message.tags == 'success' %}bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-300{% elif message.tags == 'error' %}bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-300{% else %}bg-cyan-500/10 border-cyan-500/30 text-cyan-700 dark:text-cyan-300{% endif %}">
+                            <div class="flex items-center gap-2">
+                                <iconify-icon icon="{% if message.tags == 'success' %}lucide:check-circle{% else %}lucide:info{% endif %}" class="text-base"></iconify-icon>
+                                <span>{{ message }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% block content %}
+                    
+                    {% endblock %}
+                </div>
+
+                {% include 'admin_panel/footer.html' %}
+            </div>
+        </main>
+    </div>
+
+    {% block scripts %}
+
+    {% endblock %}
+</body>
+</html>

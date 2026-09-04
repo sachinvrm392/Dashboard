@@ -1,0 +1,345 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard — Leads Management CRM{% endblock %}
+
+{% block header_left %}
+<div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-xl bg-cyan-500/10 dark:bg-navy-800 border border-cyan-500/20 dark:border-navy-border flex items-center justify-center text-cyan-600 dark:text-navy-cyan shadow-sm">
+        <iconify-icon icon="lucide:layout-dashboard" class="text-base"></iconify-icon>
+    </div>
+    <div class="flex items-center gap-2">
+        <span class="text-xs font-semibold text-slate-500 dark:text-navy-muted">Dashboard</span>
+        <span class="text-xs text-slate-400 dark:text-navy-muted">/</span>
+        <h1 class="font-display text-sm font-bold text-slate-900 dark:text-white tracking-tight">Leads Management &amp; Quota Intelligence</h1>
+    </div>
+</div>
+{% endblock %}
+
+{% block header_right %}
+<div class="flex items-center gap-3">
+    <!-- Theme Toggle Button -->
+    <button type="button" onclick="toggleTheme()" 
+        class="p-2 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800/80 hover:bg-slate-200 dark:hover:bg-navy-800 text-slate-600 dark:text-navy-cyan transition-all shadow-sm flex items-center justify-center group active:scale-95" 
+        title="Toggle Light / Dark theme">
+        <iconify-icon icon="lucide:sun" class="text-base hidden dark:inline text-amber-400 group-hover:rotate-45 transition-transform duration-300"></iconify-icon>
+        <iconify-icon icon="lucide:moon" class="text-base inline dark:hidden text-indigo-600 group-hover:-rotate-12 transition-transform duration-300"></iconify-icon>
+    </button>
+
+    <a href="{% url 'admin_panel:bp_create' %}" class="px-3.5 py-1.5 bg-gradient-to-r from-[#00d2ff] to-[#0088ff] hover:from-[#33dcff] hover:to-[#1aa0ff] text-slate-950 font-bold rounded-xl text-xs shadow-[0_0_15px_rgba(0,210,255,0.25)] hover:shadow-[0_0_20px_rgba(0,210,255,0.4)] transition-all flex items-center gap-1.5 active:scale-[0.99]">
+        <iconify-icon icon="lucide:plus" class="text-sm"></iconify-icon>
+        <span>Add Business Partner</span>
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- KPI Metric Cards Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Total Business Partners -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-cyan-500/40 transition-all group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Total Partners</span>
+                    <div class="text-2xl font-bold font-mono text-slate-900 dark:text-white mt-1.5">{{ total_bps }}</div>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-1 block">Active directory</span>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-cyan-500/10 dark:bg-navy-cyan/10 border border-cyan-500/20 dark:border-navy-cyan/20 flex items-center justify-center text-cyan-600 dark:text-navy-cyan shadow-sm">
+                    <iconify-icon icon="lucide:users" class="text-2xl"></iconify-icon>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Partners -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-emerald-500/40 transition-all group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Active Accounts</span>
+                    <div class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1.5">{{ active_bps }}</div>
+                    <span class="text-[11px] text-emerald-600 dark:text-emerald-400/80 mt-1 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Operational
+                    </span>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-sm">
+                    <iconify-icon icon="lucide:check-circle-2" class="text-2xl"></iconify-icon>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Quota Consumed -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-amber-500/40 transition-all group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Credits Consumed</span>
+                    <div class="text-2xl font-bold font-mono text-amber-500 dark:text-amber-400 mt-1.5">{{ total_credits_used_all }}</div>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-1 block">Live API aggregation</span>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 dark:text-amber-400 shadow-sm">
+                    <iconify-icon icon="lucide:zap" class="text-2xl"></iconify-icon>
+                </div>
+            </div>
+        </div>
+
+        <!-- Consumption Rate -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-indigo-500/40 transition-all group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Quota Velocity</span>
+                    <div class="text-2xl font-bold font-mono text-indigo-600 dark:text-indigo-400 mt-1.5">{{ overall_usage_percentage }}%</div>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-1 block">Of provisioned limits</span>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm">
+                    <iconify-icon icon="lucide:activity" class="text-2xl"></iconify-icon>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 7-Day Credit Usage Consumption Chart -->
+    <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm space-y-4 transition-colors duration-150">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-navy-border/70 pb-4">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <iconify-icon icon="lucide:bar-chart-3" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                    Weekly Credit Activity &amp; Generation
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">Character consumption activity recorded across registered business partners over the last 7 days</p>
+            </div>
+            <span class="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-navy-border">
+                7 Days Window
+            </span>
+        </div>
+        <div class="h-64 w-full relative">
+            <canvas id="chartWeeklyBars"></canvas>
+        </div>
+    </div>
+
+    <!-- Business Partner Registry Section (Latest 5 Partners) -->
+    <div class="rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm overflow-hidden transition-colors duration-150">
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-navy-border/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/50 dark:bg-navy-800/30">
+            <div>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">Business Partner Registry</h3>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/10 dark:bg-navy-cyan/15 text-cyan-600 dark:text-navy-cyan border border-cyan-500/20 dark:border-navy-cyan/30">Latest 5</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">Most recently added partners &amp; quota status</p>
+            </div>
+            <a href="{% url 'admin_panel:bp_list' %}" class="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-navy-border bg-white dark:bg-navy-800 hover:bg-slate-100 dark:hover:bg-navy-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
+                <span>View All Partners</span>
+                <span class="font-mono text-[10px] text-cyan-600 dark:text-navy-cyan">({{ total_bps }})</span>
+                <iconify-icon icon="lucide:arrow-right" class="text-xs"></iconify-icon>
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 dark:border-navy-border/70 bg-slate-50 dark:bg-[#121327] text-slate-500 dark:text-navy-muted uppercase font-mono text-[10px]">
+                        <th class="py-3 px-5">#</th>
+                        <th class="py-3 px-5">Partner / Company</th>
+                        <th class="py-3 px-5">Contact Details</th>
+                        <th class="py-3 px-5">Status</th>
+                        <th class="py-3 px-5">Credit Limit</th>
+                        <th class="py-3 px-5">Consumed</th>
+                        <th class="py-3 px-5">Remaining</th>
+                        <th class="py-3 px-5 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-navy-border/50 text-slate-700 dark:text-slate-300">
+                    {% for data in bp_data_list %}
+                    <tr class="hover:bg-slate-50/80 dark:hover:bg-navy-800/40 transition-colors">
+                        <td class="py-3.5 px-5 font-mono text-slate-400 dark:text-navy-muted">{{ forloop.counter }}</td>
+                        
+                        <!-- Partner / Company -->
+                        <td class="py-3.5 px-5">
+                            <div class="flex items-center gap-3">
+                                {% if data.bp.logo %}
+                                <img src="{{ data.bp.logo.url }}" class="w-8 h-8 rounded-lg object-cover border border-slate-200 dark:border-white/10" alt="logo">
+                                {% else %}
+                                <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-navy-950 border border-slate-200 dark:border-navy-border flex items-center justify-center font-bold text-cyan-600 dark:text-navy-cyan text-xs">
+                                    {{ data.bp.company_name|slice:":2"|upper }}
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <div class="font-bold text-slate-900 dark:text-white leading-snug">{{ data.bp.company_name }}</div>
+                                    <div class="text-[11px] text-slate-400 dark:text-navy-muted font-mono flex items-center gap-1.5 mt-0.5">
+                                        <iconify-icon icon="lucide:user" class="text-[10px] text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                                        <span>{{ data.bp.user.username }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Contact Details -->
+                        <td class="py-3.5 px-5">
+                            <div class="font-medium text-slate-900 dark:text-slate-200">{{ data.bp.contact_person }}</div>
+                            <div class="text-[11px] text-slate-500 dark:text-navy-muted flex items-center gap-1 mt-0.5">
+                                <iconify-icon icon="lucide:mail" class="text-[10px]"></iconify-icon>
+                                <a href="mailto:{{ data.bp.email }}" class="hover:text-cyan-600 dark:hover:text-navy-cyan transition-colors">{{ data.bp.email }}</a>
+                            </div>
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td class="py-3.5 px-5">
+                            {% if data.bp.is_active %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-mono">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Inactive
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Credit Limit -->
+                        <td class="py-3.5 px-5">
+                            <span class="font-mono text-cyan-600 dark:text-navy-cyan font-bold text-xs">{{ data.bp.credit_alert_threshold }}</span>
+                            <span class="text-[10px] text-slate-400 dark:text-navy-muted block">credits</span>
+                        </td>
+
+                        <!-- Quota Consumed & Remaining -->
+                        {% if data.bp.elevenlabs_api_key and not data.api_error and data.credit_info %}
+                        <td class="py-3.5 px-5 font-mono text-amber-500 dark:text-amber-400 font-bold">{{ data.credit_info.character_count }}</td>
+                        <td class="py-3.5 px-5 font-mono text-emerald-600 dark:text-emerald-400 font-bold">{{ data.remaining }}</td>
+                        {% else %}
+                        <td class="py-3.5 px-5 font-mono text-slate-400 dark:text-navy-muted">N/A</td>
+                        <td class="py-3.5 px-5 font-mono text-slate-400 dark:text-navy-muted">N/A</td>
+                        {% endif %}
+
+                        <!-- Actions (Icons Only) -->
+                        <td class="py-3.5 px-5 text-right">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <a href="{% url 'admin_panel:bp_detail' data.bp.pk %}" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800 hover:bg-cyan-500/10 dark:hover:bg-navy-cyan hover:text-cyan-600 dark:hover:text-navy-950 text-slate-600 dark:text-slate-300 transition-colors flex items-center justify-center" title="View Partner Details" aria-label="View">
+                                    <iconify-icon icon="lucide:eye" class="text-sm"></iconify-icon>
+                                </a>
+                                <a href="{% url 'admin_panel:bp_update' data.bp.pk %}" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800 hover:bg-amber-500/10 text-slate-600 dark:text-slate-300 hover:text-amber-500 transition-colors flex items-center justify-center" title="Edit Partner Profile" aria-label="Edit">
+                                    <iconify-icon icon="lucide:edit-3" class="text-sm"></iconify-icon>
+                                </a>
+                                <form action="{% url 'admin_panel:bp_toggle' data.bp.pk %}" method="post" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button type="submit" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800 {% if data.bp.is_active %}hover:bg-amber-500/10 text-slate-600 dark:text-slate-300 hover:text-amber-500{% else %}hover:bg-emerald-500/10 text-slate-600 dark:text-slate-300 hover:text-emerald-500{% endif %} transition-colors flex items-center justify-center" title="{% if data.bp.is_active %}Deactivate Partner{% else %}Activate Partner{% endif %}" aria-label="{% if data.bp.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                        <iconify-icon icon="{% if data.bp.is_active %}lucide:pause-circle{% else %}lucide:play-circle{% endif %}" class="text-sm"></iconify-icon>
+                                    </button>
+                                </form>
+                                <!-- Soft Delete Action -->
+                                <form action="{% url 'admin_panel:bp_soft_delete' data.bp.pk %}" method="post" class="inline" onsubmit="return confirm('Move business partner {{ data.bp.company_name }} to trash? Data will be preserved.');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button type="submit" class="w-7 h-7 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-colors flex items-center justify-center" title="Move to Trash" aria-label="Move to Trash">
+                                        <iconify-icon icon="lucide:trash-2" class="text-sm"></iconify-icon>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="py-10 text-center text-slate-400 dark:text-navy-muted">
+                            <div class="space-y-2">
+                                <iconify-icon icon="lucide:users" class="text-3xl"></iconify-icon>
+                                <p class="text-xs">No business partners registered yet.</p>
+                                <a href="{% url 'admin_panel:bp_create' %}" class="inline-flex items-center gap-1 text-xs text-cyan-600 dark:text-navy-cyan font-semibold hover:underline">
+                                    <iconify-icon icon="lucide:plus"></iconify-icon>
+                                    Add your first partner
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const chartLabels = {{ days_labels_json|safe }};
+    const chartValues = {{ days_values_json|safe }};
+    let weeklyChartInstance = null;
+
+    function getChartThemeColors() {
+        const isDark = document.documentElement.classList.contains('dark');
+        return {
+            tickColor: isDark ? '#8e94b2' : '#64748b',
+            gridColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+            barColor: '#00d2ff',
+        };
+    }
+
+    function initWeeklyChart() {
+        const ctxBars = document.getElementById('chartWeeklyBars');
+        if (!ctxBars) return;
+
+        const colors = getChartThemeColors();
+        weeklyChartInstance = new Chart(ctxBars, {
+            type: 'bar',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    label: 'Credits Consumed',
+                    data: chartValues,
+                    backgroundColor: colors.barColor,
+                    borderRadius: 6,
+                    barThickness: 22,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#161730',
+                        titleColor: '#ffffff',
+                        bodyColor: '#00d2ff',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        padding: 10,
+                        displayColors: false,
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            color: colors.tickColor,
+                            font: { size: 11, family: 'Plus Jakarta Sans' }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: colors.gridColor,
+                        },
+                        ticks: {
+                            color: colors.tickColor,
+                            font: { size: 10, family: 'monospace' }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', initWeeklyChart);
+
+    // Dynamic Chart repaint on theme toggle
+    window.addEventListener('themechange', function() {
+        if (!weeklyChartInstance) return;
+        const colors = getChartThemeColors();
+        weeklyChartInstance.options.scales.x.ticks.color = colors.tickColor;
+        weeklyChartInstance.options.scales.y.ticks.color = colors.tickColor;
+        weeklyChartInstance.options.scales.y.grid.color = colors.gridColor;
+        weeklyChartInstance.update();
+    });
+</script>
+{% endblock %}

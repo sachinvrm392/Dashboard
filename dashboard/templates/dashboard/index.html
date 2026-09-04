@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Dashboard - {{ bp.company_name }}</h2>
+        {% if not no_api_key and not api_error %}
+        <button id="refreshBtn" class="btn btn-primary">
+            <i class="bi bi-arrow-clockwise"></i> Refresh Data
+        </button>
+        {% endif %}
+    </div>
+
+    {% if no_api_key %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle-fill me-2"></i> No ElevenLabs API key configured. Please contact your administrator.
+    </div>
+    {% elif api_error %}
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> Error fetching API data: {{ api_error }}
+    </div>
+    {% else %}
+
+        {% if alert_status %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> Your credits are running low! Only {{ 100|add:"-usage_percentage"|floatformat:1 }}% remaining. Contact your administrator.
+        </div>
+        {% endif %}
+
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div class="text-primary mb-2"><i class="bi bi-credit-card-fill fs-3"></i></div>
+                        <h6 class="card-subtitle mb-2 text-muted">Total Credits</h6>
+                        <h3 id="statTotal" class="card-title">{{ character_limit|intcomma }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div class="text-warning mb-2"><i class="bi bi-graph-up-arrow fs-3"></i></div>
+                        <h6 class="card-subtitle mb-2 text-muted">Used Credits</h6>
+                        <h3 id="statUsed" class="card-title">{{ character_count|intcomma }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div class="text-success mb-2"><i class="bi bi-check-circle-fill fs-3"></i></div>
+                        <h6 class="card-subtitle mb-2 text-muted">Remaining Credits</h6>
+                        <h3 id="statRemaining" class="card-title">{{ remaining|intcomma }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <div class="{% if usage_percentage > 90 %}text-danger{% elif usage_percentage > 75 %}text-warning{% else %}text-success{% endif %} mb-2">
+                            <i class="bi bi-pie-chart-fill fs-3"></i>
+                        </div>
+                        <h6 class="card-subtitle mb-2 text-muted">Usage %</h6>
+                        <h3 id="statPercent" class="card-title">{{ usage_percentage }}%</h3>
+                        <div class="progress mt-2" style="height: 5px;">
+                            <div class="progress-bar {% if usage_percentage > 90 %}bg-danger{% elif usage_percentage > 75 %}bg-warning{% else %}bg-success{% endif %}" role="progressbar" style="width: {{ usage_percentage }}%" aria-valuenow="{{ usage_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Credit Usage History</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="usageChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Available Voices</h5>
+                        <span class="badge bg-primary rounded-pill">{{ voices|length }}</span>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if voices %}
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>Voice Name</th>
+                                        <th>Category</th>
+                                        <th>Labels</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for voice in voices %}
+                                    <tr>
+                                        <td><strong>{{ voice.name }}</strong></td>
+                                        <td><span class="badge bg-secondary">{{ voice.category }}</span></td>
+                                        <td>
+                                            {% if voice.labels %}
+                                                {% for key, val in voice.labels.items %}
+                                                    <span class="badge bg-info text-dark me-1" title="{{ key }}">{{ val }}</span>
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted small">None</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="p-3 text-center text-muted">No voices found</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Usage History Log</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if recent_snapshots %}
+                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th class="text-end">Total</th>
+                                        <th class="text-end">Used</th>
+                                        <th class="text-end">Remaining</th>
+                                        <th class="text-end">%</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for snapshot in recent_snapshots %}
+                                    <tr>
+                                        <td>{{ snapshot.snapshot_date|date:"M d, Y" }}</td>
+                                        <td class="text-end">{{ snapshot.character_limit|intcomma }}</td>
+                                        <td class="text-end">{{ snapshot.character_count|intcomma }}</td>
+                                        <td class="text-end">{{ snapshot.remaining|intcomma }}</td>
+                                        <td class="text-end">
+                                            <span class="badge {% if snapshot.usage_percentage > 90 %}bg-danger{% elif snapshot.usage_percentage > 75 %}bg-warning{% else %}bg-success{% endif %}">
+                                                {{ snapshot.usage_percentage }}%
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="p-3 text-center text-muted">No usage history available yet</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if not no_api_key and not api_error %}
+{{ usage_chart_data|safe|json_script:"chartData" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chartDataEl = document.getElementById('chartData');
+        if (chartDataEl) {
+            const chartData = JSON.parse(chartDataEl.textContent);
+            const ctx = document.getElementById('usageChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                const btn = this;
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Refreshing...';
+                btn.disabled = true;
+
+                fetch('{% url "dashboard:refresh" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Unknown error'));
+                        btn.innerHTML = originalHTML;
+                        btn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    alert('Error: ' + error);
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                });
+            });
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

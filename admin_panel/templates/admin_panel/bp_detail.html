@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ bp.company_name }} — Partner Dossier &amp; Quotas — Leads Management CRM{% endblock %}
+
+{% block header_left %}
+<div class="flex items-center gap-3">
+    <a href="{% url 'admin_panel:bp_list' %}" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-[#1c1e3d] border border-slate-200 dark:border-navy-border flex items-center justify-center text-slate-500 dark:text-navy-muted hover:text-slate-900 dark:hover:text-white hover:border-cyan-500 dark:hover:border-navy-cyan transition-all shadow-sm group" title="Return to Directory">
+        <iconify-icon icon="lucide:arrow-left" class="text-sm group-hover:-translate-x-0.5 transition-transform"></iconify-icon>
+    </a>
+    <div class="flex items-center gap-2">
+        <a href="{% url 'admin_panel:bp_list' %}" class="text-xs text-slate-500 dark:text-navy-muted hover:text-slate-900 dark:hover:text-white transition-colors">Partners</a>
+        <span class="text-xs text-slate-400 dark:text-navy-muted">/</span>
+        <h1 class="font-display text-sm font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <span>{{ bp.company_name }}</span>
+            {% if bp.is_deleted %}
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">DELETED</span>
+            {% elif bp.is_active %}
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">ACTIVE</span>
+            {% else %}
+            <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">INACTIVE</span>
+            {% endif %}
+        </h1>
+    </div>
+</div>
+{% endblock %}
+
+{% block header_right %}
+<div class="flex items-center gap-3">
+    <!-- Theme Toggle Button -->
+    <button type="button" onclick="toggleTheme()" 
+        class="p-2 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800/80 hover:bg-slate-200 dark:hover:bg-navy-800 text-slate-600 dark:text-navy-cyan transition-all shadow-sm flex items-center justify-center group active:scale-95" 
+        title="Toggle Light / Dark theme">
+        <iconify-icon icon="lucide:sun" class="text-base hidden dark:inline text-amber-400 group-hover:rotate-45 transition-transform duration-300"></iconify-icon>
+        <iconify-icon icon="lucide:moon" class="text-base inline dark:hidden text-indigo-600 group-hover:-rotate-12 transition-transform duration-300"></iconify-icon>
+    </button>
+
+    {% if not bp.is_deleted %}
+    <a href="{% url 'admin_panel:bp_update' bp.pk %}" class="px-3.5 py-1.5 bg-slate-100 dark:bg-navy-800 hover:bg-amber-500/10 text-slate-700 dark:text-slate-200 hover:text-amber-500 rounded-xl border border-slate-200 dark:border-navy-border text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+        <iconify-icon icon="lucide:edit-3" class="text-xs"></iconify-icon>
+        <span>Edit Partner</span>
+    </a>
+    {% endif %}
+
+    <a href="{% url 'admin_panel:bp_list' %}" class="px-3.5 py-1.5 bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-navy-border rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+        <iconify-icon icon="lucide:arrow-left" class="text-xs"></iconify-icon>
+        <span>Back to List</span>
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Partner Profile Card -->
+    <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 transition-colors duration-150">
+        <div class="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+            {% if bp.logo %}
+            <img src="{{ bp.logo.url }}" class="w-20 h-20 rounded-2xl object-cover border border-slate-200 dark:border-white/10 shadow-md" alt="logo">
+            {% else %}
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-[#00d2ff] via-indigo-500 to-purple-600 flex items-center justify-center font-bold text-slate-950 text-2xl shadow-lg ring-4 ring-slate-100 dark:ring-navy-800">
+                {{ bp.company_name|slice:":2"|upper }}
+            </div>
+            {% endif %}
+
+            <div class="space-y-1">
+                <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{{ bp.company_name }}</h2>
+                    <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-navy-border">
+                        @{{ bp.user.username }}
+                    </span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-navy-muted">Primary Contact: <span class="font-medium text-slate-800 dark:text-slate-200">{{ bp.contact_person }}</span> &bull; <a href="mailto:{{ bp.email }}" class="hover:text-cyan-600 dark:hover:text-navy-cyan">{{ bp.email }}</a></p>
+                {% if bp.phone %}
+                <p class="text-xs text-slate-500 dark:text-navy-muted">Phone: <span class="font-mono text-slate-700 dark:text-slate-300">{{ bp.phone }}</span></p>
+                {% endif %}
+                <div class="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-3 text-[11px] text-slate-400 dark:text-navy-muted font-mono">
+                    <span>Onboarded: {{ bp.created_at|date:"M d, Y" }}</span>
+                    <span>&bull;</span>
+                    <span>Last Synced: {{ bp.updated_at|date:"M d, Y H:i" }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Controls Button Group -->
+        <div class="flex flex-wrap items-center justify-center gap-2">
+            {% if bp.is_deleted %}
+            <form action="{% url 'admin_panel:bp_restore' bp.pk %}" method="post" class="inline" onsubmit="return confirm('Restore this business partner?');">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/30 text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+                    <iconify-icon icon="lucide:rotate-ccw" class="text-sm"></iconify-icon>
+                    <span>Restore Account</span>
+                </button>
+            </form>
+            {% else %}
+            <form action="{% url 'admin_panel:bp_toggle' bp.pk %}" method="post" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800 hover:bg-slate-100 dark:hover:bg-navy-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm">
+                    <iconify-icon icon="{% if bp.is_active %}lucide:pause-circle{% else %}lucide:play-circle{% endif %}" class="text-sm"></iconify-icon>
+                    <span>{% if bp.is_active %}Deactivate{% else %}Activate{% endif %}</span>
+                </button>
+            </form>
+            <form action="{% url 'admin_panel:bp_soft_delete' bp.pk %}" method="post" class="inline" onsubmit="return confirm('Move this partner to trash? Data will be preserved.');">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'admin_panel:bp_list' %}">
+                <button type="submit" class="px-3.5 py-2 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm">
+                    <iconify-icon icon="lucide:trash-2" class="text-sm"></iconify-icon>
+                    <span>Move to Trash</span>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Live Credit Quota KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Credit Limit -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-cyan-500/40 transition-all">
+            <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Credit Limit Cap</span>
+            <div class="text-2xl font-bold font-mono text-cyan-600 dark:text-navy-cyan mt-1.5">
+                {{ bp.credit_alert_threshold }}
+            </div>
+            <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-1 block">Provisioned quota allowance</span>
+        </div>
+
+        <!-- Quota Consumed -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-amber-500/40 transition-all">
+            <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Characters Consumed</span>
+            <div class="text-2xl font-bold font-mono text-amber-500 dark:text-amber-400 mt-1.5">
+                {% if credit_info and not credit_info.error %}{{ credit_info.character_count }}{% else %}N/A{% endif %}
+            </div>
+            <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-1 block">Live ElevenLabs usage</span>
+        </div>
+
+        <!-- Remaining Quota -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-emerald-500/40 transition-all">
+            <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Remaining Balance</span>
+            <div class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1.5">
+                {% if credit_info and not credit_info.error %}{{ credit_info.character_limit|add:"-"|add:credit_info.character_count|default:"0" }}{% else %}N/A{% endif %}
+            </div>
+            <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-1 block">Characters available</span>
+        </div>
+
+        <!-- API Node Status -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-indigo-500/40 transition-all">
+            <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">API Integration</span>
+            <div class="text-base font-bold font-mono text-slate-900 dark:text-white mt-2 flex items-center gap-2">
+                {% if bp.elevenlabs_api_key and not api_error %}
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span class="text-emerald-600 dark:text-emerald-400 text-sm">Synchronized</span>
+                {% elif bp.elevenlabs_api_key and api_error %}
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <span class="text-amber-500 text-sm">Sync Error</span>
+                {% else %}
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                <span class="text-slate-400 text-sm">No Key Configured</span>
+                {% endif %}
+            </div>
+            <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-1 block">ElevenLabs v1 gateway</span>
+        </div>
+    </div>
+
+    <!-- Available Voices Table -->
+    <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm space-y-4 transition-colors duration-150">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-navy-border/70 pb-4">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <iconify-icon icon="lucide:mic" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                    Configured Voices &amp; Synthesis Profiles
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">Voice models assigned to this partner account via ElevenLabs workspace</p>
+            </div>
+            <span class="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-navy-border">
+                {{ voices|length }} Available
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 dark:border-navy-border/70 bg-slate-50 dark:bg-[#121327] text-slate-500 dark:text-navy-muted uppercase font-mono text-[10px]">
+                        <th class="py-3 px-4">Voice Name</th>
+                        <th class="py-3 px-4">Voice ID</th>
+                        <th class="py-3 px-4">Category</th>
+                        <th class="py-3 px-4">Labels / Accent</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-navy-border/50 text-slate-700 dark:text-slate-300">
+                    {% for voice in voices %}
+                    <tr class="hover:bg-slate-50/80 dark:hover:bg-navy-800/40 transition-colors">
+                        <td class="py-3 px-4 font-bold text-slate-900 dark:text-white">{{ voice.name }}</td>
+                        <td class="py-3 px-4 font-mono text-slate-500 dark:text-navy-muted text-[11px]">{{ voice.voice_id }}</td>
+                        <td class="py-3 px-4 font-mono text-cyan-600 dark:text-navy-cyan">{{ voice.category|default:"Standard" }}</td>
+                        <td class="py-3 px-4 text-slate-500 dark:text-navy-muted">{{ voice.labels|default:"Default" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="py-8 text-center text-slate-400 dark:text-navy-muted">
+                            <iconify-icon icon="lucide:mic-off" class="text-2xl mb-1"></iconify-icon>
+                            <p class="text-xs">No voices fetched from API or API key not yet connected.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
