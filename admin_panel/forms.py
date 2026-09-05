@@ -1,6 +1,7 @@
 import string
 import secrets
 from django import forms
+from django.db import transaction
 from django.contrib.auth import get_user_model
 from accounts.models import BusinessPartner
 
@@ -98,6 +99,7 @@ class BPCreateForm(forms.ModelForm):
     def clean_elevenlabs_api_key(self):
         return self.cleaned_data.get('elevenlabs_api_key', '').strip()
 
+    @transaction.atomic
     def save(self, commit=True):
         username = self.cleaned_data['username']
         temp_password = self.cleaned_data['temp_password']

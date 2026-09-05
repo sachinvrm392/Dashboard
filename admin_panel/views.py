@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.views.decorators.http import require_POST
+from django.db import transaction
 from accounts.models import BusinessPartner, User
 from accounts.decorators import super_admin_required
 from dashboard.services import ElevenLabsService
@@ -26,7 +27,7 @@ def admin_dashboard(request):
     total_credit_limit_all = 0
     
     # Show only the latest 5 business partners in the registry section
-    latest_bps = bps[:5]
+    latest_bps = list(bps[:5])
     
     for bp in latest_bps:
         bp_info = {
@@ -127,7 +128,8 @@ def bp_list(request):
         page_obj = paginator.page(paginator.num_pages)
         
     bp_data_list = []
-    for bp in page_obj:
+    bps_page_list = list(page_obj.object_list)
+    for bp in bps_page_list:
         bp_info = {
             'bp': bp,
             'credit_info': None,
@@ -168,7 +170,8 @@ def bp_create(request):
     if request.method == 'POST':
         form = BPCreateForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            with transaction.atomic():
+                form.save()
             messages.success(request, 'Business Partner created successfully.')
             return redirect('admin_panel:bp_list')
     else:
