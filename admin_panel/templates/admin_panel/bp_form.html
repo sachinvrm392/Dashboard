@@ -56,7 +56,7 @@
 
                     <!-- Form Card -->
                     <div class="bg-white dark:bg-[#161730] border border-slate-200 dark:border-navy-border rounded-2xl p-7 shadow-sm transition-colors duration-150">
-                        <form method="post" enctype="multipart/form-data" id="bpForm" novalidate class="space-y-6">
+                        <form method="post" action="{% if is_create %}{% url 'admin_panel:bp_create' %}{% else %}{% url 'admin_panel:bp_update' bp.pk %}{% endif %}" enctype="multipart/form-data" id="bpForm" novalidate class="space-y-6">
                             {% csrf_token %}
 
                             <div id="formValidationSummary" class="{% if not form.errors %}hidden{% endif %} p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5">
@@ -448,7 +448,37 @@
                 }
             });
 
+            function getCsrfToken() {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, 10) === 'csrftoken=') {
+                            cookieValue = decodeURIComponent(cookie.substring(10));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
             form.addEventListener('submit', function(e) {
+                // Ensure CSRF token is present and filled before sending
+                let csrfInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
+                if (!csrfInput || !csrfInput.value) {
+                    const token = getCsrfToken();
+                    if (token) {
+                        if (!csrfInput) {
+                            csrfInput = document.createElement('input');
+                            csrfInput.type = 'hidden';
+                            csrfInput.name = 'csrfmiddlewaretoken';
+                            form.prepend(csrfInput);
+                        }
+                        csrfInput.value = token;
+                    }
+                }
+
                 if (!validateAll()) {
                     e.preventDefault();
                     e.stopPropagation();
