@@ -1,238 +1,583 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Dashboard - {{ bp.company_name }}</h2>
-        {% if not no_api_key and not api_error %}
-        <button id="refreshBtn" class="btn btn-primary">
-            <i class="bi bi-arrow-clockwise"></i> Refresh Data
-        </button>
-        {% endif %}
+{% block title %}Dashboard — {{ bp.company_name }} — ElevenLabs Credit Management{% endblock %}
+
+{% block header_left %}
+<div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-navy-cyan shadow-sm">
+        <iconify-icon icon="lucide:layout-dashboard" class="text-base"></iconify-icon>
     </div>
-
-    {% if no_api_key %}
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle-fill me-2"></i> No ElevenLabs API key configured. Please contact your administrator.
+    <div>
+        <div class="flex items-center gap-2">
+            <h1 class="font-display text-sm font-bold text-slate-900 dark:text-white tracking-tight">
+                {{ bp.company_name }}
+            </h1>
+            {% if is_live %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                LIVE SYNC
+            </span>
+            {% elif api_error %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                SYNC NOTICE
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-slate-500/15 text-slate-600 dark:text-slate-400 border border-slate-500/30">
+                OFFLINE
+            </span>
+            {% endif %}
+        </div>
+        <p class="text-[11px] text-slate-500 dark:text-navy-muted">ElevenLabs Voice &amp; Credit Management Console</p>
     </div>
-    {% elif api_error %}
-    <div class="alert alert-danger">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i> Error fetching API data: {{ api_error }}
-    </div>
-    {% else %}
+</div>
+{% endblock %}
 
-        {% if alert_status %}
-        <div class="alert alert-warning">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i> Your credits are running low! Only {{ 100|add:"-usage_percentage"|floatformat:1 }}% remaining. Contact your administrator.
-        </div>
-        {% endif %}
+{% block header_right %}
+<div class="flex items-center gap-3">
+    <!-- Theme Toggle -->
+    <button type="button" onclick="toggleTheme()" 
+        class="p-2 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800/80 hover:bg-slate-200 dark:hover:bg-navy-800 text-slate-600 dark:text-navy-cyan transition-all shadow-sm flex items-center justify-center group active:scale-95" 
+        title="Toggle Light / Dark theme">
+        <iconify-icon icon="lucide:sun" class="text-base hidden dark:inline text-amber-400 group-hover:rotate-45 transition-transform duration-300"></iconify-icon>
+        <iconify-icon icon="lucide:moon" class="text-base inline dark:hidden text-indigo-600 group-hover:-rotate-12 transition-transform duration-300"></iconify-icon>
+    </button>
 
-        <div class="row mb-4">
-            <div class="col-md-3 mb-3">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <div class="text-primary mb-2"><i class="bi bi-credit-card-fill fs-3"></i></div>
-                        <h6 class="card-subtitle mb-2 text-muted">Total Credits</h6>
-                        <h3 id="statTotal" class="card-title">{{ character_limit|intcomma }}</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <div class="text-warning mb-2"><i class="bi bi-graph-up-arrow fs-3"></i></div>
-                        <h6 class="card-subtitle mb-2 text-muted">Used Credits</h6>
-                        <h3 id="statUsed" class="card-title">{{ character_count|intcomma }}</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <div class="text-success mb-2"><i class="bi bi-check-circle-fill fs-3"></i></div>
-                        <h6 class="card-subtitle mb-2 text-muted">Remaining Credits</h6>
-                        <h3 id="statRemaining" class="card-title">{{ remaining|intcomma }}</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 mb-3">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <div class="{% if usage_percentage > 90 %}text-danger{% elif usage_percentage > 75 %}text-warning{% else %}text-success{% endif %} mb-2">
-                            <i class="bi bi-pie-chart-fill fs-3"></i>
-                        </div>
-                        <h6 class="card-subtitle mb-2 text-muted">Usage %</h6>
-                        <h3 id="statPercent" class="card-title">{{ usage_percentage }}%</h3>
-                        <div class="progress mt-2" style="height: 5px;">
-                            <div class="progress-bar {% if usage_percentage > 90 %}bg-danger{% elif usage_percentage > 75 %}bg-warning{% else %}bg-success{% endif %}" role="progressbar" style="width: {{ usage_percentage }}%" aria-valuenow="{{ usage_percentage }}" aria-valuemin="0" aria-valuemax="100"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">Credit Usage History</h5>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="usageChart" height="100"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row mb-4">
-            <div class="col-md-6 mb-3">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Available Voices</h5>
-                        <span class="badge bg-primary rounded-pill">{{ voices|length }}</span>
-                    </div>
-                    <div class="card-body p-0">
-                        {% if voices %}
-                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th>Voice Name</th>
-                                        <th>Category</th>
-                                        <th>Labels</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for voice in voices %}
-                                    <tr>
-                                        <td><strong>{{ voice.name }}</strong></td>
-                                        <td><span class="badge bg-secondary">{{ voice.category }}</span></td>
-                                        <td>
-                                            {% if voice.labels %}
-                                                {% for key, val in voice.labels.items %}
-                                                    <span class="badge bg-info text-dark me-1" title="{{ key }}">{{ val }}</span>
-                                                {% endfor %}
-                                            {% else %}
-                                                <span class="text-muted small">None</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% else %}
-                        <div class="p-3 text-center text-muted">No voices found</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <div class="card shadow-sm h-100">
-                    <div class="card-header bg-white">
-                        <h5 class="mb-0">Usage History Log</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        {% if recent_snapshots %}
-                        <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                            <table class="table table-hover mb-0">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th>Date</th>
-                                        <th class="text-end">Total</th>
-                                        <th class="text-end">Used</th>
-                                        <th class="text-end">Remaining</th>
-                                        <th class="text-end">%</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for snapshot in recent_snapshots %}
-                                    <tr>
-                                        <td>{{ snapshot.snapshot_date|date:"M d, Y" }}</td>
-                                        <td class="text-end">{{ snapshot.character_limit|intcomma }}</td>
-                                        <td class="text-end">{{ snapshot.character_count|intcomma }}</td>
-                                        <td class="text-end">{{ snapshot.remaining|intcomma }}</td>
-                                        <td class="text-end">
-                                            <span class="badge {% if snapshot.usage_percentage > 90 %}bg-danger{% elif snapshot.usage_percentage > 75 %}bg-warning{% else %}bg-success{% endif %}">
-                                                {{ snapshot.usage_percentage }}%
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% else %}
-                        <div class="p-3 text-center text-muted">No usage history available yet</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
+    <!-- Live Refresh Button -->
+    {% if not no_api_key %}
+    <button id="refreshBtn" type="button" 
+        class="px-3.5 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-sm shadow-cyan-500/20 active:scale-95">
+        <iconify-icon icon="lucide:rotate-cw" id="refreshIcon" class="text-xs"></iconify-icon>
+        <span id="refreshText">Sync ElevenLabs</span>
+    </button>
     {% endif %}
 </div>
 {% endblock %}
 
-{% block extra_js %}
-{% if not no_api_key and not api_error %}
-{{ usage_chart_data|safe|json_script:"chartData" }}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Partner Hero Banner -->
+    <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 transition-colors duration-150">
+        <div class="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left">
+            {% if bp.logo %}
+            <img src="{{ bp.logo.url }}" class="w-16 h-16 rounded-2xl object-cover border border-slate-200 dark:border-white/10 shadow-md" alt="Partner Logo">
+            {% else %}
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#00d2ff] via-indigo-500 to-purple-600 flex items-center justify-center font-bold text-slate-950 text-2xl shadow-lg ring-4 ring-slate-100 dark:ring-navy-800">
+                {{ bp.company_name|slice:":2"|upper }}
+            </div>
+            {% endif %}
+
+            <div class="space-y-1">
+                <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+                    <h2 class="text-xl font-bold text-slate-900 dark:text-white tracking-tight">{{ bp.company_name }}</h2>
+                    <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-navy-border">
+                        Tier: {{ subscription_info.tier|default:"Standard / Pay As You Go"|title }}
+                    </span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-navy-muted">
+                    Contact: <span class="font-medium text-slate-800 dark:text-slate-200">{{ bp.contact_person }}</span>
+                    &bull; <a href="mailto:{{ bp.email }}" class="hover:text-cyan-600 dark:hover:text-navy-cyan">{{ bp.email }}</a>
+                    {% if bp.phone %}&bull; <span class="font-mono">{{ bp.phone }}</span>{% endif %}
+                </p>
+                <div class="pt-0.5 flex flex-wrap items-center justify-center sm:justify-start gap-3 text-[11px] text-slate-400 dark:text-navy-muted font-mono">
+                    <span>Alert Threshold: <strong>{{ bp.credit_alert_threshold }}%</strong></span>
+                    <span>&bull;</span>
+                    <span>Status: <span class="text-emerald-500 font-semibold">Active</span></span>
+                    {% if subscription_info.next_character_count_reset_unix %}
+                    <span>&bull;</span>
+                    <span>Next Cycle Reset: {{ subscription_info.next_reset_date|default:"Upcoming" }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center gap-2">
+            <div class="text-right hidden md:block">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 dark:text-navy-muted font-semibold block">Gateway Node</span>
+                <span class="text-xs font-mono font-medium text-slate-700 dark:text-slate-300">api.elevenlabs.io/v1</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Informative Alerts (Non-blocking, UI boxes always render below) -->
+    {% if no_api_key %}
+    <div class="p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-800 dark:text-cyan-300 flex items-center justify-between gap-4 text-xs">
+        <div class="flex items-center gap-3">
+            <iconify-icon icon="lucide:info" class="text-xl text-cyan-600 dark:text-navy-cyan flex-shrink-0"></iconify-icon>
+            <div>
+                <strong class="font-semibold block text-sm">ElevenLabs API Key Not Yet Configured</strong>
+                <p class="text-cyan-700 dark:text-cyan-300/80 mt-0.5">Please contact your administrator to provision your ElevenLabs API Key. Displaying baseline allocation credits below.</p>
+            </div>
+        </div>
+    </div>
+    {% elif api_error %}
+    <div class="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 flex items-center justify-between gap-4 text-xs">
+        <div class="flex items-center gap-3">
+            <iconify-icon icon="lucide:alert-triangle" class="text-xl text-amber-500 flex-shrink-0"></iconify-icon>
+            <div>
+                <strong class="font-semibold block text-sm">ElevenLabs API Notice</strong>
+                <p class="text-amber-700 dark:text-amber-300/80 mt-0.5">{{ api_error }} — Showing latest cached snapshot data.</p>
+            </div>
+        </div>
+        <button type="button" onclick="document.getElementById('refreshBtn')?.click()" class="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-200 rounded-xl font-medium transition-colors flex-shrink-0">
+            Retry Connection
+        </button>
+    </div>
+    {% endif %}
+
+    {% if alert_status %}
+    <div class="p-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-800 dark:text-rose-300 flex items-center justify-between gap-4 text-xs">
+        <div class="flex items-center gap-3">
+            <iconify-icon icon="lucide:shield-alert" class="text-xl text-rose-500 flex-shrink-0"></iconify-icon>
+            <div>
+                <strong class="font-semibold block text-sm">Low Balance Warning</strong>
+                <p class="text-rose-700 dark:text-rose-300/80 mt-0.5">Your credit balance is below the configured alert threshold ({{ bp.credit_alert_threshold }}%). Only {{ remaining_percentage }}% characters remain.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 4 INTERACTIVE CREDIT BOXES (ALWAYS SHOWN) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <!-- 1. Total Credit Box -->
+        <div class="group p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-cyan-500/50 dark:hover:border-navy-cyan/50 hover:shadow-md hover:shadow-cyan-500/5 transition-all duration-200 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Total Credits</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Allocated Cycle Cap</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-navy-cyan group-hover:scale-110 transition-transform">
+                    <iconify-icon icon="lucide:coins" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-baseline gap-1.5">
+                    <span id="statTotal" class="text-2xl sm:text-3xl font-bold font-mono text-cyan-600 dark:text-navy-cyan tracking-tight">
+                        {{ character_limit|intcomma }}
+                    </span>
+                    <span class="text-xs font-mono text-slate-400 dark:text-navy-muted">chars</span>
+                </div>
+                <div class="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
+                    <span>Provisioned Tier</span>
+                    <span class="font-mono font-medium text-slate-700 dark:text-slate-300">{{ subscription_info.tier|default:"Standard"|title }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Consumed Credit Box -->
+        <div class="group p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-amber-500/50 dark:hover:border-amber-400/50 hover:shadow-md hover:shadow-amber-500/5 transition-all duration-200 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Consumed Credit</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Used This Billing Period</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
+                    <iconify-icon icon="lucide:flame" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-baseline gap-1.5">
+                    <span id="statUsed" class="text-2xl sm:text-3xl font-bold font-mono text-amber-500 dark:text-amber-400 tracking-tight">
+                        {{ character_count|intcomma }}
+                    </span>
+                    <span class="text-xs font-mono text-slate-400 dark:text-navy-muted">chars</span>
+                </div>
+                <div class="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
+                    <span>Consumption Rate</span>
+                    <span id="statUsageRate" class="font-mono font-medium text-amber-600 dark:text-amber-400">{{ usage_percentage }}%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Remaining Credit Box -->
+        <div class="group p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-emerald-500/50 dark:hover:border-emerald-400/50 hover:shadow-md hover:shadow-emerald-500/5 transition-all duration-200 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Remaining Credit</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Available Balance</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                    <iconify-icon icon="lucide:sparkles" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-baseline gap-1.5">
+                    <span id="statRemaining" class="text-2xl sm:text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
+                        {{ remaining|intcomma }}
+                    </span>
+                    <span class="text-xs font-mono text-slate-400 dark:text-navy-muted">chars</span>
+                </div>
+                <div class="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
+                    <span>Available Buffer</span>
+                    <span id="statRemainingPct" class="font-mono font-medium text-emerald-600 dark:text-emerald-400">{{ remaining_percentage }}%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Quota Health & Gauge Box -->
+        <div class="group p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-indigo-500/50 dark:hover:border-indigo-400/50 hover:shadow-md hover:shadow-indigo-500/5 transition-all duration-200 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Quota Health</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Threshold Monitor</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                    <iconify-icon icon="lucide:gauge" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-baseline justify-between">
+                    <span id="statPercent" class="text-2xl sm:text-3xl font-bold font-mono {% if usage_percentage > 90 %}text-rose-500{% elif usage_percentage > 75 %}text-amber-500{% else %}text-indigo-600 dark:text-indigo-400{% endif %} tracking-tight">
+                        {{ usage_percentage }}%
+                    </span>
+                    <span class="text-[11px] font-mono uppercase font-semibold {% if alert_status %}text-rose-500{% else %}text-emerald-500{% endif %}">
+                        {% if alert_status %}Warning{% else %}Healthy{% endif %}
+                    </span>
+                </div>
+                <div class="w-full bg-slate-100 dark:bg-navy-800 rounded-full h-2 mt-2 overflow-hidden">
+                    <div id="statProgressBar" class="h-2 rounded-full transition-all duration-500 {% if usage_percentage > 90 %}bg-rose-500{% elif usage_percentage > 75 %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ usage_percentage|default:0 }}%"></div>
+                </div>
+                <div class="mt-2.5 pt-1.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
+                    <span>Alert Trigger Point</span>
+                    <span class="font-mono text-slate-700 dark:text-slate-300">&lt; {{ bp.credit_alert_threshold }}% remaining</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Credit Usage History Interactive Chart -->
+    <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm space-y-4 transition-colors duration-150">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-navy-border/70 pb-4">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <iconify-icon icon="lucide:trending-up" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                    Credit Consumption Trajectory
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">Chronological character generation and API volume across billing period</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-border text-[11px] font-mono text-slate-600 dark:text-slate-300">
+                    Cycle Range: Last 30 Days
+                </span>
+            </div>
+        </div>
+        <div class="relative h-64 sm:h-72 w-full">
+            <canvas id="usageChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Bottom Grids: Voices & Snapshot History -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Available Voices Box -->
+        <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm space-y-4 transition-colors duration-150 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-navy-border/70 pb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                            <iconify-icon icon="lucide:mic" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                            Available Voice Models
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">Synthesizers available in this workspace</p>
+                    </div>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-cyan-500/10 text-cyan-600 dark:text-navy-cyan border border-cyan-500/30">
+                        {{ voices|length }} Active
+                    </span>
+                </div>
+
+                <div class="mt-4">
+                    {% if voices %}
+                    <div class="overflow-x-auto max-h-72 overflow-y-auto pr-1">
+                        <table class="w-full text-left text-xs">
+                            <thead class="sticky top-0 bg-slate-50 dark:bg-navy-900 text-slate-400 dark:text-navy-muted text-[11px] uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-navy-border">
+                                <tr>
+                                    <th class="py-2.5 px-3">Voice Name</th>
+                                    <th class="py-2.5 px-3">Category</th>
+                                    <th class="py-2.5 px-3">Labels / Tags</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-navy-border/40 font-mono">
+                                {% for voice in voices %}
+                                <tr class="hover:bg-slate-50 dark:hover:bg-navy-800/50 transition-colors">
+                                    <td class="py-2.5 px-3 font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
+                                        <span>{{ voice.name }}</span>
+                                    </td>
+                                    <td class="py-2.5 px-3">
+                                        <span class="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-300 text-[10px]">
+                                            {{ voice.category|default:"custom" }}
+                                        </span>
+                                    </td>
+                                    <td class="py-2.5 px-3">
+                                        {% if voice.labels %}
+                                            <div class="flex flex-wrap gap-1">
+                                            {% for k, v in voice.labels.items %}
+                                                <span class="px-1.5 py-0.5 rounded text-[9px] bg-cyan-500/10 text-cyan-700 dark:text-navy-cyan border border-cyan-500/20">
+                                                    {{ v }}
+                                                </span>
+                                            {% endfor %}
+                                            </div>
+                                        {% else %}
+                                            <span class="text-slate-400 text-[10px]">Standard</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="py-12 text-center text-slate-400 dark:text-navy-muted space-y-2">
+                        <iconify-icon icon="lucide:mic-off" class="text-3xl"></iconify-icon>
+                        <p class="text-xs">No ElevenLabs voice models returned for this key.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Snapshots Log Box -->
+        <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm space-y-4 transition-colors duration-150 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-navy-border/70 pb-4">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                            <iconify-icon icon="lucide:history" class="text-base text-amber-500"></iconify-icon>
+                            Credit Log &amp; Snapshots
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">Recorded balance checkpoints</p>
+                    </div>
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                        {{ recent_snapshots|length }} Logs
+                    </span>
+                </div>
+
+                <div class="mt-4">
+                    {% if recent_snapshots %}
+                    <div class="overflow-x-auto max-h-72 overflow-y-auto pr-1">
+                        <table class="w-full text-left text-xs">
+                            <thead class="sticky top-0 bg-slate-50 dark:bg-navy-900 text-slate-400 dark:text-navy-muted text-[11px] uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-navy-border">
+                                <tr>
+                                    <th class="py-2.5 px-3">Date</th>
+                                    <th class="py-2.5 px-3 text-right">Limit</th>
+                                    <th class="py-2.5 px-3 text-right">Consumed</th>
+                                    <th class="py-2.5 px-3 text-right">Remaining</th>
+                                    <th class="py-2.5 px-3 text-right">Usage</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-navy-border/40 font-mono">
+                                {% for snapshot in recent_snapshots %}
+                                <tr class="hover:bg-slate-50 dark:hover:bg-navy-800/50 transition-colors">
+                                    <td class="py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-300">
+                                        {{ snapshot.snapshot_date|date:"M d, Y" }}
+                                    </td>
+                                    <td class="py-2.5 px-3 text-right text-slate-500 dark:text-navy-muted">
+                                        {{ snapshot.character_limit|intcomma }}
+                                    </td>
+                                    <td class="py-2.5 px-3 text-right text-amber-600 dark:text-amber-400">
+                                        {{ snapshot.character_count|intcomma }}
+                                    </td>
+                                    <td class="py-2.5 px-3 text-right text-emerald-600 dark:text-emerald-400">
+                                        {{ snapshot.remaining|intcomma }}
+                                    </td>
+                                    <td class="py-2.5 px-3 text-right">
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {% if snapshot.usage_percentage > 90 %}bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30{% elif snapshot.usage_percentage > 75 %}bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30{% else %}bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30{% endif %}">
+                                            {{ snapshot.usage_percentage }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="py-12 text-center text-slate-400 dark:text-navy-muted space-y-2">
+                        <iconify-icon icon="lucide:database" class="text-3xl"></iconify-icon>
+                        <p class="text-xs">No prior snapshot history recorded yet. Daily snapshots will accumulate here.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+{{ usage_chart_data|safe|json_script:"usageChartData" }}
+
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const chartDataEl = document.getElementById('chartData');
-        if (chartDataEl) {
-            const chartData = JSON.parse(chartDataEl.textContent);
-            const ctx = document.getElementById('usageChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: chartData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Chart Rendering
+    let chartInstance = null;
+    const chartCanvas = document.getElementById('usageChart');
+    const chartDataEl = document.getElementById('usageChartData');
+    
+    function renderChart() {
+        if (!chartCanvas || !chartDataEl) return;
+        const rawData = JSON.parse(chartDataEl.textContent || '{}');
+        const labels = rawData.labels || ['Current Cycle'];
+        const values = rawData.values || [{{ character_count }}];
+        
+        const isDark = document.documentElement.classList.contains('dark');
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+        const textColor = isDark ? '#8e94b2' : '#64748b';
+        const primaryColor = '#00d2ff';
+        
+        const ctx = chartCanvas.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(0, 210, 255, 0.35)');
+        gradient.addColorStop(1, 'rgba(0, 210, 255, 0.00)');
+        
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+        
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Characters Consumed',
+                    data: values,
+                    borderColor: primaryColor,
+                    backgroundColor: gradient,
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointBackgroundColor: primaryColor,
+                    pointBorderColor: isDark ? '#161730' : '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: isDark ? '#1c1e3d' : '#ffffff',
+                        titleColor: isDark ? '#ffffff' : '#0f172a',
+                        bodyColor: isDark ? '#00d2ff' : '#0284c7',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                        borderWidth: 1,
+                        padding: 10,
+                        boxPadding: 4,
+                        callbacks: {
+                            label: function(context) {
+                                return ' ' + Number(context.raw).toLocaleString() + ' chars consumed';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: gridColor },
+                        ticks: { color: textColor, font: { family: 'Plus Jakarta Sans', size: 11 } }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: gridColor },
+                        ticks: {
+                            color: textColor,
+                            font: { family: 'Plus Jakarta Sans', size: 11 },
+                            callback: function(val) {
+                                return Number(val).toLocaleString();
+                            }
                         }
                     }
                 }
-            });
-        }
+            }
+        });
+    }
 
-        const refreshBtn = document.getElementById('refreshBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', function() {
-                const btn = this;
-                const originalHTML = btn.innerHTML;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Refreshing...';
-                btn.disabled = true;
+    renderChart();
+    window.addEventListener('themechange', renderChart);
 
-                fetch('{% url "dashboard:refresh" %}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Accept': 'application/json'
+    // 2. Interactive Refresh Sync Button
+    const refreshBtn = document.getElementById('refreshBtn');
+    const refreshIcon = document.getElementById('refreshIcon');
+    const refreshText = document.getElementById('refreshText');
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            refreshBtn.disabled = true;
+            refreshBtn.classList.add('opacity-75');
+            refreshIcon.classList.add('animate-spin');
+            refreshText.textContent = 'Syncing...';
+
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
                     }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('Error: ' + (data.error || 'Unknown error'));
-                        btn.innerHTML = originalHTML;
-                        btn.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    alert('Error: ' + error);
-                    btn.innerHTML = originalHTML;
-                    btn.disabled = false;
-                });
+                }
+                return cookieValue;
+            }
+
+            fetch("{% url 'dashboard:refresh' %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Update stats directly in DOM
+                    const totalEl = document.getElementById('statTotal');
+                    const usedEl = document.getElementById('statUsed');
+                    const remEl = document.getElementById('statRemaining');
+                    const pctEl = document.getElementById('statPercent');
+                    const rateEl = document.getElementById('statUsageRate');
+                    const remPctEl = document.getElementById('statRemainingPct');
+                    const barEl = document.getElementById('statProgressBar');
+
+                    if (totalEl) totalEl.textContent = Number(data.character_limit).toLocaleString();
+                    if (usedEl) usedEl.textContent = Number(data.character_count).toLocaleString();
+                    if (remEl) remEl.textContent = Number(data.remaining).toLocaleString();
+                    if (pctEl) pctEl.textContent = data.usage_percentage + '%';
+                    if (rateEl) rateEl.textContent = data.usage_percentage + '%';
+                    if (remPctEl) remPctEl.textContent = Math.max(0, (100 - data.usage_percentage).toFixed(1)) + '%';
+                    if (barEl) barEl.style.width = data.usage_percentage + '%';
+
+                    refreshText.textContent = 'Synchronized!';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 800);
+                } else {
+                    alert('Sync error: ' + (data.error || 'Failed to communicate with ElevenLabs.'));
+                    refreshBtn.disabled = false;
+                    refreshBtn.classList.remove('opacity-75');
+                    refreshIcon.classList.remove('animate-spin');
+                    refreshText.textContent = 'Sync ElevenLabs';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                refreshBtn.disabled = false;
+                refreshBtn.classList.remove('opacity-75');
+                refreshIcon.classList.remove('animate-spin');
+                refreshText.textContent = 'Sync ElevenLabs';
+                alert('Connection error occurred while attempting to sync.');
             });
-        }
-    });
+        });
+    }
+});
 </script>
-{% endif %}
 {% endblock %}

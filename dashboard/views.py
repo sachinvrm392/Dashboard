@@ -19,33 +19,52 @@ def bp_dashboard(request):
         
     context = {'bp': bp}
     
-    if not bp.elevenlabs_api_key:
-        context['no_api_key'] = True
-        return render(request, 'dashboard/index.html', context)
+    # 1. Fetch latest stored snapshot from DB if available as baseline
+    latest_snapshot = CreditSnapshot.objects.filter(business_partner=bp).order_by('-snapshot_date', '-created_at').first()
+    
+    # Baseline defaults from DB snapshot or partner configured credit threshold
+    character_limit = latest_snapshot.character_limit if (latest_snapshot and latest_snapshot.character_limit > 0) else (bp.credit_alert_threshold or 10000)
+    character_count = latest_snapshot.character_count if latest_snapshot else 0
+    
+    api_error = None
+    no_api_key = not bool(bp.elevenlabs_api_key)
+    voices = []
+    usage_history = []
+    subscription_info = {}
+    is_live = False
+    
+    if not no_api_key:
+        api_key = bp.elevenlabs_api_key.strip()
+        subscription_info = ElevenLabsService.get_subscription_info(api_key)
         
-    api_key = bp.elevenlabs_api_key
-    
-    subscription_info = ElevenLabsService.get_subscription_info(api_key)
-    usage_history = ElevenLabsService.get_usage_history(api_key)
-    voices = ElevenLabsService.get_voices(api_key)
-    
-    if subscription_info.get('error'):
-        context['api_error'] = subscription_info.get('message')
-        return render(request, 'dashboard/index.html', context)
-        
-    alert_sent = check_and_send_credit_alert(bp, subscription_info)
-    
-    today = timezone.localdate()
-    CreditSnapshot.objects.update_or_create(
-        business_partner=bp,
-        snapshot_date=today,
-        defaults={
-            'character_count': subscription_info.get('character_count', 0),
-            'character_limit': subscription_info.get('character_limit', 0)
-        }
-    )
-    
+        if subscription_info.get('error'):
+            api_error = subscription_info.get('message')
+        else:
+            is_live = True
+            character_limit = subscription_info.get('character_limit', character_limit)
+            character_count = subscription_info.get('character_count', character_count)
+            voices = ElevenLabsService.get_voices(api_key)
+            usage_history = ElevenLabsService.get_usage_history(api_key)
+            
+            # Record or update today's snapshot
+            today = timezone.localdate()
+            CreditSnapshot.objects.update_or_create(
+                business_partner=bp,
+                snapshot_date=today,
+                defaults={
+                    'character_count': character_count,
+                    'character_limit': character_limit
+                }
+            )
+            check_and_send_credit_alert(bp, subscription_info)
+            
     recent_snapshots = CreditSnapshot.objects.filter(business_partner=bp).order_by('-snapshot_date')[:30]
+    
+    remaining = max(0, character_limit - character_count)
+    usage_percentage = round((character_count / character_limit * 100), 1) if character_limit else 0.0
+    remaining_percentage = round(max(0.0, 100.0 - usage_percentage), 1)
+    
+    alert_status = (remaining <= bp.credit_alert_threshold) if bp.credit_alert_threshold > 100 else (remaining_percentage <= bp.credit_alert_threshold)
     
     chart_labels = []
     chart_data = []
@@ -58,29 +77,16 @@ def bp_dashboard(request):
                 chart_labels.append(dt.strftime('%b %d'))
                 chart_data.append(point['value'])
     else:
-        # Fallback
+        # Fallback to recent snapshots
         for snap in reversed(recent_snapshots):
             chart_labels.append(snap.snapshot_date.strftime('%b %d'))
             chart_data.append(snap.character_count)
             
     usage_chart_data = {
-        'labels': chart_labels,
-        'datasets': [{
-            'label': 'Character Count',
-            'data': chart_data,
-            'borderColor': 'rgb(75, 192, 192)',
-            'tension': 0.1
-        }]
+        'labels': chart_labels if chart_labels else ['Current Cycle'],
+        'values': chart_data if chart_data else [character_count],
     }
     
-    character_limit = subscription_info.get('character_limit', 0)
-    character_count = subscription_info.get('character_count', 0)
-    remaining = max(0, character_limit - character_count)
-    usage_percentage = round((character_count / character_limit * 100), 1) if character_limit else 0
-    remaining_percentage = 100 - usage_percentage
-    
-    alert_status = (remaining <= bp.credit_alert_threshold) if bp.credit_alert_threshold > 100 else (remaining_percentage <= bp.credit_alert_threshold)
-
     context.update({
         'subscription_info': subscription_info,
         'voices': voices,
@@ -90,8 +96,12 @@ def bp_dashboard(request):
         'character_count': character_count,
         'remaining': remaining,
         'usage_percentage': usage_percentage,
+        'remaining_percentage': remaining_percentage,
         'alert_status': alert_status,
-        'alert_sent': alert_sent
+        'no_api_key': no_api_key,
+        'api_error': api_error,
+        'is_live': is_live,
+        'active_nav': 'dashboard',
     })
     
     return render(request, 'dashboard/index.html', context)
