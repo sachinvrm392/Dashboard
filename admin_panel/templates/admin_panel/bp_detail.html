@@ -35,6 +35,10 @@
     </button>
 
     {% if not bp.is_deleted %}
+    <a href="{% url 'admin_panel:bp_reset_password' bp.pk %}" class="px-3.5 py-1.5 bg-slate-100 dark:bg-navy-800 hover:bg-cyan-500/10 text-slate-700 dark:text-slate-200 hover:text-cyan-600 dark:hover:text-navy-cyan rounded-xl border border-slate-200 dark:border-navy-border text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+        <iconify-icon icon="lucide:key-round" class="text-xs"></iconify-icon>
+        <span>Reset Password</span>
+    </a>
     <a href="{% url 'admin_panel:bp_update' bp.pk %}" class="px-3.5 py-1.5 bg-slate-100 dark:bg-navy-800 hover:bg-amber-500/10 text-slate-700 dark:text-slate-200 hover:text-amber-500 rounded-xl border border-slate-200 dark:border-navy-border text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
         <iconify-icon icon="lucide:edit-3" class="text-xs"></iconify-icon>
         <span>Edit Partner</span>

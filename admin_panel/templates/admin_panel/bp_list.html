@@ -326,6 +326,10 @@
                                 <a href="{% url 'admin_panel:bp_update' data.bp.pk %}" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800 hover:bg-amber-500/10 text-slate-600 dark:text-slate-300 hover:text-amber-500 transition-colors flex items-center justify-center" title="Edit Partner Profile" aria-label="Edit">
                                     <iconify-icon icon="lucide:edit-3" class="text-sm"></iconify-icon>
                                 </a>
+                                <!-- Reset Password -->
+                                <a href="{% url 'admin_panel:bp_reset_password' data.bp.pk %}" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800 hover:bg-cyan-500/10 text-slate-600 dark:text-slate-300 hover:text-cyan-600 dark:hover:text-navy-cyan transition-colors flex items-center justify-center" title="Reset Partner Password" aria-label="Reset Password">
+                                    <iconify-icon icon="lucide:key-round" class="text-sm"></iconify-icon>
+                                </a>
                                 <!-- Toggle Active/Inactive -->
                                 <form action="{% url 'admin_panel:bp_toggle' data.bp.pk %}" method="post" class="inline">
                                     {% csrf_token %}

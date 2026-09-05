@@ -5,7 +5,7 @@ from django.db import transaction
 from accounts.models import BusinessPartner, User
 from accounts.decorators import super_admin_required
 from dashboard.services import ElevenLabsService
-from .forms import BPCreateForm, BPUpdateForm, UserProfileForm
+from .forms import BPCreateForm, BPUpdateForm, UserProfileForm, BPResetPasswordForm
 from django.contrib.auth.decorators import login_required
 
 import json
@@ -315,3 +315,34 @@ def user_profile(request):
         'active_nav': 'profile',
     }
     return render(request, 'admin_panel/profile.html', context)
+
+
+@super_admin_required
+def bp_reset_password(request, pk=None):
+    target_bp = None
+    target_user = None
+    if pk:
+        target_bp = get_object_or_404(BusinessPartner, pk=pk)
+        target_user = target_bp.user
+
+    if request.method == 'POST':
+        form = BPResetPasswordForm(request.POST, target_user=target_user)
+        if form.is_valid():
+            updated_user = form.save()
+            company_name = updated_user.business_partner.company_name if hasattr(updated_user, 'business_partner') else updated_user.username
+            messages.success(request, f"Password for business partner @{updated_user.username} ({company_name}) has been reset successfully.")
+            if target_bp:
+                return redirect('admin_panel:bp_detail', pk=target_bp.pk)
+            return redirect('admin_panel:bp_list')
+    else:
+        form = BPResetPasswordForm(target_user=target_user)
+
+    total_bps = BusinessPartner.objects.filter(is_deleted=False).count()
+    context = {
+        'form': form,
+        'target_bp': target_bp,
+        'active_nav': 'reset_password',
+        'total_bps': total_bps,
+    }
+    return render(request, 'admin_panel/bp_reset_password.html', context)
+

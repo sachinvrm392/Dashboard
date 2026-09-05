@@ -267,3 +267,75 @@ class UserProfileForm(forms.Form):
             bp.save()
         return self.user
 
+
+class BPResetPasswordForm(forms.Form):
+    user = forms.ModelChoiceField(
+        label="Selected username",
+        queryset=User.objects.none(),
+        empty_label="-- Select Business Partner Username --",
+        required=True,
+        error_messages={'required': 'Please select a business partner username.'},
+        widget=forms.Select(attrs={
+            'class': 'w-full bg-slate-50 dark:bg-[#111224] border border-slate-200 dark:border-navy-border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-navy-cyan transition-all'
+        })
+    )
+    password = forms.CharField(
+        label="Password",
+        required=True,
+        max_length=128,
+        error_messages={'required': 'Password is required.'},
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Enter new password (min. 8 characters)',
+            'class': 'w-full bg-slate-50 dark:bg-[#111224] border border-slate-200 dark:border-navy-border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-mono placeholder-slate-500 focus:outline-none focus:border-navy-cyan transition-all'
+        })
+    )
+    confirm_password = forms.CharField(
+        label="Confirm password",
+        required=True,
+        max_length=128,
+        error_messages={'required': 'Please confirm the new password.'},
+        widget=forms.PasswordInput(attrs={
+            'placeholder': 'Confirm new password',
+            'class': 'w-full bg-slate-50 dark:bg-[#111224] border border-slate-200 dark:border-navy-border rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-mono placeholder-slate-500 focus:outline-none focus:border-navy-cyan transition-all'
+        })
+    )
+
+    def __init__(self, *args, target_user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        qs = User.objects.filter(
+            role=User.Role.BUSINESS_PARTNER,
+            business_partner__is_deleted=False
+        ).select_related('business_partner').order_by('username')
+
+        self.fields['user'].queryset = qs
+        self.fields['user'].label_from_instance = (
+            lambda u: f"@{u.username} — {u.business_partner.company_name} ({u.business_partner.contact_person})" if hasattr(u, 'business_partner') else f"@{u.username}"
+        )
+
+        if target_user:
+            self.fields['user'].initial = target_user
+
+    def clean_password(self):
+        password = self.cleaned_data.get('password', '')
+        if len(password) < 8:
+            raise forms.ValidationError("Password must be at least 8 characters long.")
+        return password
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('password')
+        confirm_password = cleaned_data.get('confirm_password')
+
+        if password and confirm_password and password != confirm_password:
+            self.add_error('confirm_password', "Password and Confirm Password do not match.")
+
+        return cleaned_data
+
+    def save(self):
+        user = self.cleaned_data['user']
+        new_password = self.cleaned_data['password']
+        user.set_password(new_password)
+        user.must_change_password = False
+        user.save()
+        return user
+

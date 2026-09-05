@@ -70,6 +70,16 @@
             </div>
             <iconify-icon icon="lucide:plus" class="text-xs text-slate-400 dark:text-navy-muted"></iconify-icon>
         </a>
+
+        <!-- Reset Partner Password Menu Item (Super Admin Only) -->
+        <a href="{% url 'admin_panel:bp_reset_password_general' %}" 
+            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'bp_reset_password_general' or request.resolver_match.url_name == 'bp_reset_password' or active_nav == 'reset_password' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-all">
+            <div class="flex items-center gap-2.5">
+                <iconify-icon icon="lucide:key-round" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                <span>Reset Partner Password</span>
+            </div>
+            <iconify-icon icon="lucide:shield-alert" class="text-xs text-slate-400 dark:text-navy-muted"></iconify-icon>
+        </a>
         {% endif %}
 
         <!-- User Profile Menu Link -->
