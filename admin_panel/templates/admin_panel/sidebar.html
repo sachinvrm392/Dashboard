@@ -2,7 +2,7 @@
 <aside class="w-[250px] flex flex-col border-r border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] flex-shrink-0 z-20 select-none h-screen sticky top-0 transition-colors duration-150">
     <!-- Brand -->
     <div class="h-16 flex items-center px-4 border-b border-slate-200 dark:border-navy-border group cursor-pointer select-none">
-        <a href="{% url 'admin_panel:dashboard' %}" class="flex items-center justify-between w-full">
+        <a href="{% if request.user.is_super_admin %}{% url 'admin_panel:dashboard' %}{% else %}{% url 'dashboard:index' %}{% endif %}" class="flex items-center justify-between w-full">
             <!-- Title Text -->
             <div class="flex flex-col">
                 <span class="font-sans text-[13.5px] font-extrabold tracking-wider uppercase bg-gradient-to-r from-slate-900 dark:from-white from-30% via-cyan-600 dark:via-[#6de2ff] to-[#00d2ff] bg-clip-text text-transparent group-hover:brightness-110 transition-all leading-tight select-none drop-shadow-[0_2px_8px_rgba(0,210,255,0.15)]">
@@ -27,7 +27,7 @@
                     </div>
                     <div class="truncate text-left">
                         <span class="text-xs font-semibold text-slate-800 dark:text-white block truncate group-hover:text-cyan-600 dark:group-hover:text-navy-cyan transition-colors">{{ request.user.username }}</span>
-                        <span class="text-[10px] text-slate-500 dark:text-navy-muted block">Super Admin</span>
+                        <span class="text-[10px] text-slate-500 dark:text-navy-muted block">{% if request.user.is_super_admin %}Super Admin{% else %}Business Partner{% endif %}</span>
                     </div>
                 </div>
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Connected"></span>
@@ -42,15 +42,16 @@
         </div>
 
         <!-- Dashboard Menu Link -->
-        <a href="{% url 'admin_panel:dashboard' %}" 
-            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'dashboard' or active_nav == 'dashboard' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-all shadow-sm">
+        <a href="{% if request.user.is_super_admin %}{% url 'admin_panel:dashboard' %}{% else %}{% url 'dashboard:index' %}{% endif %}" 
+            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'index' or active_nav == 'dashboard' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-all shadow-sm">
             <div class="flex items-center gap-2.5">
                 <iconify-icon icon="lucide:layout-dashboard" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
                 <span>Dashboard</span>
             </div>
         </a>
 
-        <!-- Business Partners Menu Link -->
+        {% if request.user.is_super_admin %}
+        <!-- Business Partners Menu Link (Super Admin Only) -->
         <a href="{% url 'admin_panel:bp_list' %}" 
             class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'bp_list' or request.resolver_match.url_name == 'bp_detail' or active_nav == 'partners' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-all">
             <div class="flex items-center gap-2.5">
@@ -60,7 +61,7 @@
             <span class="bg-cyan-500/10 dark:bg-navy-cyan/20 border border-cyan-500/30 dark:border-navy-cyan/40 text-cyan-600 dark:text-navy-cyan text-[10px] font-bold px-2 py-0.5 rounded-full font-mono">{{ total_bps|default:"0" }}</span>
         </a>
 
-        <!-- Add Business Partner Menu Item -->
+        <!-- Add Business Partner Menu Item (Super Admin Only) -->
         <a href="{% url 'admin_panel:bp_create' %}" 
             class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'bp_create' or active_nav == 'add_bp' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-all">
             <div class="flex items-center gap-2.5">
@@ -69,6 +70,7 @@
             </div>
             <iconify-icon icon="lucide:plus" class="text-xs text-slate-400 dark:text-navy-muted"></iconify-icon>
         </a>
+        {% endif %}
 
         <!-- User Profile Menu Link -->
         <a href="{% url 'admin_panel:profile' %}" 

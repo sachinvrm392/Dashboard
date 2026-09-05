@@ -5,7 +5,7 @@
         {% block header_left %}
         <div class="flex items-center gap-2">
             <span class="text-xs font-semibold text-slate-500 dark:text-navy-muted">
-                {% if request.resolver_match.url_name == 'dashboard' %}
+                {% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'index' %}
                     Dashboard
                 {% elif request.resolver_match.url_name == 'profile' %}
                     Account
@@ -20,6 +20,8 @@
                 {% block header_title %}
                     {% if request.resolver_match.url_name == 'dashboard' %}
                         Leads Management &amp; Quota Intelligence
+                    {% elif request.resolver_match.url_name == 'index' %}
+                        Partner Quota &amp; Intelligence Dashboard
                     {% elif request.resolver_match.url_name == 'bp_list' %}
                         Partner Directory &amp; Quotas
                     {% elif request.resolver_match.url_name == 'bp_create' %}
@@ -52,9 +54,9 @@
             <iconify-icon icon="lucide:moon" class="text-base inline dark:hidden text-indigo-600 group-hover:-rotate-12 transition-transform duration-300"></iconify-icon>
         </button>
 
-        {% if user.is_authenticated and user.is_super_admin %}
-            <!-- Add Business Partner CTA -->
-            {% if request.resolver_match.url_name != 'bp_create' %}
+        {% if user.is_authenticated %}
+            <!-- Add Business Partner CTA (Super Admin Only) -->
+            {% if user.is_super_admin and request.resolver_match.url_name != 'bp_create' %}
             <a href="{% url 'admin_panel:bp_create' %}" class="px-3.5 py-1.5 bg-gradient-to-r from-[#00d2ff] to-[#0088ff] hover:from-[#33dcff] hover:to-[#1aa0ff] text-slate-950 font-bold rounded-xl text-xs shadow-[0_0_15px_rgba(0,210,255,0.25)] hover:shadow-[0_0_20px_rgba(0,210,255,0.4)] transition-all flex items-center gap-1.5 active:scale-[0.99]">
                 <iconify-icon icon="lucide:plus" class="text-sm"></iconify-icon>
                 <span class="hidden sm:inline">Add Business Partner</span>
@@ -68,7 +70,7 @@
                 </div>
                 <div class="flex flex-col text-left">
                     <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 group-hover:text-cyan-600 dark:group-hover:text-navy-cyan transition-colors leading-none">{{ user.username }}</span>
-                    <span class="text-[10px] text-slate-500 dark:text-navy-muted leading-tight">Super Admin</span>
+                    <span class="text-[10px] text-slate-500 dark:text-navy-muted leading-tight">{% if user.is_super_admin %}Super Admin{% else %}Business Partner{% endif %}</span>
                 </div>
             </a>
         {% endif %}
