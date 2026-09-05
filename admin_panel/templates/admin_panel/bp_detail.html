@@ -92,6 +92,14 @@
                     <span>Restore Account</span>
                 </button>
             </form>
+            <form action="{% url 'admin_panel:bp_hard_delete' bp.pk %}" method="post" class="inline" onsubmit="return confirm('PERMANENT DELETION: Are you sure you want to permanently delete this business partner and their account? This cannot be undone.');">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'admin_panel:bp_list' %}?status=trash">
+                <button type="submit" class="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl border border-rose-500/30 text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+                    <iconify-icon icon="lucide:trash" class="text-sm"></iconify-icon>
+                    <span>Permanent Delete</span>
+                </button>
+            </form>
             {% else %}
             <form action="{% url 'admin_panel:bp_toggle' bp.pk %}" method="post" class="inline">
                 {% csrf_token %}

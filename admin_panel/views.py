@@ -240,6 +240,39 @@ def bp_restore(request, pk):
     next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'admin_panel:bp_list'
     return redirect(next_url)
 
+@require_POST
+@super_admin_required
+def bp_hard_delete(request, pk):
+    bp = get_object_or_404(BusinessPartner, pk=pk)
+    company_name = bp.company_name
+    user = bp.user
+    with transaction.atomic():
+        if user:
+            user.delete()
+        else:
+            bp.delete()
+    messages.success(request, f"Business Partner '{company_name}' permanently deleted.")
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'admin_panel:bp_list'
+    return redirect(next_url)
+
+@require_POST
+@super_admin_required
+def bp_empty_trash(request):
+    deleted_bps = BusinessPartner.objects.filter(is_deleted=True)
+    count = deleted_bps.count()
+    if count == 0:
+        messages.info(request, "Trash is already empty.")
+        return redirect('admin_panel:bp_list')
+    
+    with transaction.atomic():
+        user_ids = list(deleted_bps.values_list('user_id', flat=True))
+        User.objects.filter(id__in=user_ids).delete()
+        deleted_bps.delete()
+        
+    messages.success(request, f"Permanently deleted {count} partner(s) from trash.")
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'admin_panel:bp_list'
+    return redirect(next_url)
+
 @super_admin_required
 def bp_detail(request, pk):
     bp = get_object_or_404(BusinessPartner, pk=pk)
