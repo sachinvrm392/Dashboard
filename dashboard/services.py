@@ -25,8 +25,19 @@ class ElevenLabsService:
             cache.set(cache_key, data, timeout=300)
             return data
         except requests.exceptions.RequestException as e:
-            logger.error(f"Error fetching subscription info: {e}")
-            return {'error': True, 'message': str(e)}
+            err_msg = str(e)
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    err_json = e.response.json()
+                    detail = err_json.get('detail')
+                    if isinstance(detail, dict) and 'message' in detail:
+                        err_msg = detail['message']
+                    elif isinstance(detail, str):
+                        err_msg = detail
+                except Exception:
+                    pass
+            logger.error(f"Error fetching subscription info: {err_msg}")
+            return {'error': True, 'message': err_msg}
 
     @staticmethod
     def get_usage_history(api_key, start_date=None, end_date=None):
@@ -47,7 +58,7 @@ class ElevenLabsService:
         headers = {"xi-api-key": api_key}
         start_unix_millis = int(start_date.timestamp() * 1000)
         end_unix_millis = int(end_date.timestamp() * 1000)
-        params = {
+        payload = {
             "start_unix_millis": start_unix_millis,
             "end_unix_millis": end_unix_millis,
             "interval_seconds": 86400
@@ -55,7 +66,7 @@ class ElevenLabsService:
         
         try:
             url = f"{ElevenLabsService.BASE_URL}/workspace/analytics/query/usage-by-product-over-time"
-            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response = requests.post(url, headers=headers, json=payload, timeout=10)
             response.raise_for_status()
             data = response.json()
             cache.set(cache_key, data, timeout=300)
