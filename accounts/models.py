@@ -24,6 +24,7 @@ class BusinessPartner(models.Model):
     address = models.TextField(blank=True)
     logo = models.ImageField(upload_to='bp_logos/', blank=True, null=True)
     elevenlabs_api_key = models.CharField(max_length=255, blank=True)
+    elevenlabs_agent_id = models.CharField(max_length=255, blank=True, default='', help_text='11lab Agent ID')
     credit_alert_threshold = models.IntegerField(default=1000, help_text='Credit limit or alert threshold (credits)')
     is_active = models.BooleanField(default=True)
     is_deleted = models.BooleanField(default=False)

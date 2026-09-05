@@ -213,6 +213,19 @@
                                 </div>
 
                                 <div>
+                                    <label for="{{ form.elevenlabs_agent_id.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">11lab Agent ID</label>
+                                    <input type="text" name="elevenlabs_agent_id" id="{{ form.elevenlabs_agent_id.id_for_label }}"
+                                        value="{{ form.elevenlabs_agent_id.value|default:'' }}"
+                                        placeholder="Enter 11lab Agent ID (e.g. agent_xxxxxxxxxxxxxxxxxxxx)"
+                                        class="w-full bg-slate-50 dark:bg-[#111224] border {% if form.elevenlabs_agent_id.errors %}border-rose-500 bg-rose-500/5{% else %}border-slate-200 dark:border-navy-border{% endif %} rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white font-mono placeholder-slate-500 focus:outline-none focus:border-navy-cyan focus:ring-1 focus:ring-navy-cyan/30 transition-all">
+                                    <p class="text-[11px] text-slate-500 dark:text-navy-muted mt-1">ElevenLabs Conversational AI Agent ID assigned to this business partner.</p>
+                                    <div id="err-{{ form.elevenlabs_agent_id.id_for_label }}" class="field-error text-[11px] text-rose-400 mt-1 flex items-center gap-1 {% if not form.elevenlabs_agent_id.errors %}hidden{% endif %}">
+                                        <iconify-icon icon="lucide:alert-circle" class="flex-shrink-0"></iconify-icon>
+                                        <span class="err-text">{{ form.elevenlabs_agent_id.errors.0|default:'' }}</span>
+                                    </div>
+                                </div>
+
+                                <div>
                                     <label for="{{ form.credit_alert_threshold.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Credit Limit *</label>
                                     <div class="flex items-center gap-3">
                                         <input type="number" name="credit_alert_threshold" id="{{ form.credit_alert_threshold.id_for_label }}" min="1" step="1"

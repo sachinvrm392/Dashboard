@@ -25,7 +25,7 @@ class BPCreateForm(forms.ModelForm):
         model = BusinessPartner
         fields = [
             'company_name', 'contact_person', 'email', 'phone', 
-            'address', 'logo', 'elevenlabs_api_key', 'credit_alert_threshold'
+            'address', 'logo', 'elevenlabs_api_key', 'elevenlabs_agent_id', 'credit_alert_threshold'
         ]
         error_messages = {
             'company_name': {'required': 'Company name is required.'},
@@ -99,6 +99,9 @@ class BPCreateForm(forms.ModelForm):
     def clean_elevenlabs_api_key(self):
         return self.cleaned_data.get('elevenlabs_api_key', '').strip()
 
+    def clean_elevenlabs_agent_id(self):
+        return self.cleaned_data.get('elevenlabs_agent_id', '').strip()
+
     @transaction.atomic
     def save(self, commit=True):
         username = self.cleaned_data['username']
@@ -125,7 +128,7 @@ class BPUpdateForm(forms.ModelForm):
         model = BusinessPartner
         fields = [
             'company_name', 'contact_person', 'email', 'phone', 
-            'address', 'logo', 'elevenlabs_api_key', 'credit_alert_threshold'
+            'address', 'logo', 'elevenlabs_api_key', 'elevenlabs_agent_id', 'credit_alert_threshold'
         ]
         error_messages = {
             'company_name': {'required': 'Company name is required.'},
@@ -179,6 +182,9 @@ class BPUpdateForm(forms.ModelForm):
 
     def clean_elevenlabs_api_key(self):
         return self.cleaned_data.get('elevenlabs_api_key', '').strip()
+
+    def clean_elevenlabs_agent_id(self):
+        return self.cleaned_data.get('elevenlabs_agent_id', '').strip()
 
 
 class UserProfileForm(forms.Form):

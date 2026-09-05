@@ -77,6 +77,13 @@
                     <span>Onboarded: {{ bp.created_at|date:"M d, Y" }}</span>
                     <span>&bull;</span>
                     <span>Last Synced: {{ bp.updated_at|date:"M d, Y H:i" }}</span>
+                    {% if bp.elevenlabs_agent_id %}
+                    <span>&bull;</span>
+                    <span class="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                        <iconify-icon icon="lucide:bot" class="text-xs text-navy-cyan"></iconify-icon>
+                        <span>Agent ID: <strong class="text-cyan-600 dark:text-navy-cyan">{{ bp.elevenlabs_agent_id }}</strong></span>
+                    </span>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -151,21 +158,28 @@
         </div>
 
         <!-- API Node Status -->
-        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-indigo-500/40 transition-all">
-            <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">API Integration</span>
-            <div class="text-base font-bold font-mono text-slate-900 dark:text-white mt-2 flex items-center gap-2">
-                {% if bp.elevenlabs_api_key and not api_error %}
-                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span class="text-emerald-600 dark:text-emerald-400 text-sm">Synchronized</span>
-                {% elif bp.elevenlabs_api_key and api_error %}
-                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                <span class="text-amber-500 text-sm">Sync Error</span>
-                {% else %}
-                <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-                <span class="text-slate-400 text-sm">No Key Configured</span>
-                {% endif %}
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-indigo-500/40 transition-all flex flex-col justify-between">
+            <div>
+                <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">API Integration</span>
+                <div class="text-base font-bold font-mono text-slate-900 dark:text-white mt-1.5 flex items-center gap-2">
+                    {% if bp.elevenlabs_api_key and not api_error %}
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span class="text-emerald-600 dark:text-emerald-400 text-sm">Synchronized</span>
+                    {% elif bp.elevenlabs_api_key and api_error %}
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                    <span class="text-amber-500 text-sm">Sync Error</span>
+                    {% else %}
+                    <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                    <span class="text-slate-400 text-sm">No Key Configured</span>
+                    {% endif %}
+                </div>
             </div>
-            <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-1 block">ElevenLabs v1 gateway</span>
+            <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 text-[11px] flex items-center justify-between">
+                <span class="text-slate-400 dark:text-navy-muted">11lab Agent ID:</span>
+                <span class="font-mono font-medium text-slate-700 dark:text-slate-200 truncate max-w-[140px]" title="{{ bp.elevenlabs_agent_id }}">
+                    {{ bp.elevenlabs_agent_id|default:"Not Set" }}
+                </span>
+            </div>
         </div>
     </div>
 

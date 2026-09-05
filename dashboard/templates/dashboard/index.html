@@ -85,6 +85,10 @@
                     <span>Alert Threshold: <strong>{{ bp.credit_alert_threshold }}%</strong></span>
                     <span>&bull;</span>
                     <span>Status: <span class="text-emerald-500 font-semibold">Active</span></span>
+                    {% if bp.elevenlabs_agent_id %}
+                    <span>&bull;</span>
+                    <span class="text-cyan-600 dark:text-navy-cyan">11lab Agent: <strong class="font-mono">{{ bp.elevenlabs_agent_id }}</strong></span>
+                    {% endif %}
                     {% if subscription_info.next_character_count_reset_unix %}
                     <span>&bull;</span>
                     <span>Next Cycle Reset: {{ subscription_info.next_reset_date|default:"Upcoming" }}</span>
