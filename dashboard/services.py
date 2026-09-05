@@ -11,6 +11,10 @@ class ElevenLabsService:
     
     @staticmethod
     def get_subscription_info(api_key):
+        api_key = (api_key or "").strip()
+        if not api_key:
+            return {'error': True, 'message': 'API key is missing or empty.'}
+            
         cache_key = f'elevenlabs_sub_{hashlib.md5(api_key.encode()).hexdigest()}'
         cached_data = cache.get(cache_key)
         
@@ -41,6 +45,10 @@ class ElevenLabsService:
 
     @staticmethod
     def get_usage_history(api_key, start_date=None, end_date=None):
+        api_key = (api_key or "").strip()
+        if not api_key:
+            return []
+            
         if not start_date:
             start_date = datetime.now() - timedelta(days=30)
         if not end_date:
@@ -77,6 +85,10 @@ class ElevenLabsService:
 
     @staticmethod
     def get_voices(api_key):
+        api_key = (api_key or "").strip()
+        if not api_key:
+            return []
+            
         cache_key = f'elevenlabs_voices_{hashlib.md5(api_key.encode()).hexdigest()}'
         cached_data = cache.get(cache_key)
         
