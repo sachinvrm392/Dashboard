@@ -187,11 +187,8 @@
                 </div>
             </div>
             <div class="mt-4">
-                <div class="flex items-baseline gap-1.5">
-                    <span class="text-2xl sm:text-3xl font-bold font-mono text-cyan-600 dark:text-navy-cyan tracking-tight">
-                        {{ character_limit|intcomma }}
-                    </span>
-                    <span class="text-xs font-mono text-slate-400 dark:text-navy-muted">chars</span>
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-cyan-600 dark:text-navy-cyan tracking-tight">
+                    {{ character_limit|intcomma }}
                 </div>
                 <div class="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
                     <span>Provisioned Tier</span>
@@ -212,11 +209,8 @@
                 </div>
             </div>
             <div class="mt-4">
-                <div class="flex items-baseline gap-1.5">
-                    <span class="text-2xl sm:text-3xl font-bold font-mono text-amber-500 dark:text-amber-400 tracking-tight">
-                        {{ character_count|intcomma }}
-                    </span>
-                    <span class="text-xs font-mono text-slate-400 dark:text-navy-muted">chars</span>
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-amber-500 dark:text-amber-400 tracking-tight">
+                    {{ character_count|intcomma }}
                 </div>
                 <div class="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
                     <span>Consumption Rate</span>
@@ -237,11 +231,8 @@
                 </div>
             </div>
             <div class="mt-4">
-                <div class="flex items-baseline gap-1.5">
-                    <span class="text-2xl sm:text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
-                        {{ remaining|intcomma }}
-                    </span>
-                    <span class="text-xs font-mono text-slate-400 dark:text-navy-muted">chars</span>
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
+                    {{ remaining|intcomma }}
                 </div>
                 <div class="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
                     <span>Available Buffer</span>
@@ -262,11 +253,8 @@
                 </div>
             </div>
             <div class="mt-4">
-                <div class="flex items-baseline gap-1.5">
-                    <span class="text-2xl sm:text-3xl font-bold font-mono text-indigo-600 dark:text-indigo-400 tracking-tight">
-                        {{ bp.credit_alert_threshold|intcomma }}
-                    </span>
-                    <span class="text-xs font-mono text-slate-400 dark:text-navy-muted">credits</span>
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-indigo-600 dark:text-indigo-400 tracking-tight">
+                    {{ bp.credit_alert_threshold|intcomma }}
                 </div>
                 <div class="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
                     <span>Alert Trigger Point</span>
