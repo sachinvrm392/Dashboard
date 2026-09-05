@@ -255,7 +255,7 @@
 
     <!-- Credit Usage History Interactive Chart -->
     <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm space-y-4 transition-colors duration-150">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-navy-border/70 pb-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-navy-border/70 pb-4">
             <div>
                 <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                     <iconify-icon icon="lucide:trending-up" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
@@ -263,13 +263,21 @@
                 </h3>
                 <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">Chronological character generation and API volume across billing period</p>
             </div>
-            <div class="flex items-center gap-2">
-                <span class="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-border text-[11px] font-mono text-slate-600 dark:text-slate-300">
-                    Cycle Range: Last 30 Days
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-border font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                    <span>Consumed: <strong class="text-slate-900 dark:text-white">{{ character_count|intcomma }}</strong></span>
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-border font-mono text-[11px] text-slate-600 dark:text-slate-300">
+                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                    <span>Cap: <strong class="text-slate-900 dark:text-white">{{ character_limit|intcomma }}</strong></span>
+                </div>
+                <span class="px-2.5 py-1 rounded-xl bg-cyan-500/10 text-cyan-700 dark:text-navy-cyan border border-cyan-500/20 text-[11px] font-mono font-medium">
+                    {{ usage_percentage }}% Quota
                 </span>
             </div>
         </div>
-        <div class="relative h-64 sm:h-72 w-full">
+        <div class="relative h-64 sm:h-80 w-full">
             <canvas id="usageChart"></canvas>
         </div>
     </div>
@@ -413,8 +421,8 @@
 </div>
 {% endblock %}
 
-{% block extra_scripts %}
-{{ usage_chart_data|safe|json_script:"usageChartData" }}
+{% block scripts %}
+{{ usage_chart_data|json_script:"usageChartData" }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -425,48 +433,89 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function renderChart() {
         if (!chartCanvas || !chartDataEl) return;
-        const rawData = JSON.parse(chartDataEl.textContent || '{}');
-        const labels = rawData.labels || ['Current Cycle'];
-        const values = rawData.values || [{{ character_count }}];
+        let rawData = {};
+        try {
+            rawData = JSON.parse(chartDataEl.textContent || '{}');
+            if (typeof rawData === 'string') {
+                rawData = JSON.parse(rawData);
+            }
+        } catch (e) {
+            console.error('Failed to parse chart data', e);
+        }
+        
+        const labels = (rawData.labels && rawData.labels.length > 0) ? rawData.labels : ['Current Cycle'];
+        const values = (rawData.values && rawData.values.length > 0) ? rawData.values : [{{ character_count }}];
+        const limits = (rawData.limit && rawData.limit.length > 0) ? rawData.limit : [];
         
         const isDark = document.documentElement.classList.contains('dark');
-        const gridColor = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
+        const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
         const textColor = isDark ? '#8e94b2' : '#64748b';
         const primaryColor = '#00d2ff';
         
         const ctx = chartCanvas.getContext('2d');
-        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, 'rgba(0, 210, 255, 0.35)');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+        gradient.addColorStop(0, 'rgba(0, 210, 255, 0.38)');
         gradient.addColorStop(1, 'rgba(0, 210, 255, 0.00)');
         
         if (chartInstance) {
             chartInstance.destroy();
+        }
+
+        const datasets = [
+            {
+                label: 'Characters Consumed',
+                data: values,
+                borderColor: primaryColor,
+                backgroundColor: gradient,
+                borderWidth: 2.5,
+                fill: true,
+                tension: 0.35,
+                pointBackgroundColor: primaryColor,
+                pointBorderColor: isDark ? '#161730' : '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+            }
+        ];
+
+        if (limits.length > 0 && limits[0] > 0) {
+            datasets.push({
+                label: 'Credit Limit Cap (' + Number(limits[0]).toLocaleString() + ')',
+                data: limits,
+                borderColor: 'rgba(245, 158, 11, 0.7)',
+                borderWidth: 1.5,
+                borderDash: [6, 6],
+                pointRadius: 0,
+                fill: false,
+                tension: 0,
+            });
         }
         
         chartInstance = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: 'Characters Consumed',
-                    data: values,
-                    borderColor: primaryColor,
-                    backgroundColor: gradient,
-                    borderWidth: 2.5,
-                    fill: true,
-                    tension: 0.35,
-                    pointBackgroundColor: primaryColor,
-                    pointBorderColor: isDark ? '#161730' : '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                }]
+                datasets: datasets
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
                 plugins: {
-                    legend: { display: false },
+                    legend: { 
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            color: textColor,
+                            boxWidth: 12,
+                            boxHeight: 12,
+                            font: { family: 'Plus Jakarta Sans', size: 11, weight: '500' }
+                        }
+                    },
                     tooltip: {
                         backgroundColor: isDark ? '#1c1e3d' : '#ffffff',
                         titleColor: isDark ? '#ffffff' : '#0f172a',
@@ -477,7 +526,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         boxPadding: 4,
                         callbacks: {
                             label: function(context) {
-                                return ' ' + Number(context.raw).toLocaleString() + ' chars consumed';
+                                return ' ' + context.dataset.label + ': ' + Number(context.raw).toLocaleString();
                             }
                         }
                     }
