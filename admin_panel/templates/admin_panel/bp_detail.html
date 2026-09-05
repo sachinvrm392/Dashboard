@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}{{ bp.company_name }} — Partner Dossier &amp; Quotas — Leads Management CRM{% endblock %}
 
@@ -88,6 +89,19 @@
                         <span>Agent ID: <strong class="text-cyan-600 dark:text-navy-cyan">{{ bp.elevenlabs_agent_id }}</strong></span>
                     </span>
                     {% endif %}
+                    <span>&bull;</span>
+                    <span class="inline-flex items-center gap-1.5">
+                        {% if bp.elevenlabs_api_key and not api_error %}
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="text-emerald-600 dark:text-emerald-400 font-semibold">API Synchronized</span>
+                        {% elif bp.elevenlabs_api_key and api_error %}
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <span class="text-amber-500 font-semibold">API Notice (Cached)</span>
+                        {% else %}
+                        <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                        <span class="text-slate-400 font-semibold">No API Key</span>
+                        {% endif %}
+                    </span>
                 </div>
             </div>
         </div>
@@ -132,59 +146,135 @@
         </div>
     </div>
 
-    <!-- Live Credit Quota KPI Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Credit Limit -->
-        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-cyan-500/40 transition-all">
-            <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Credit Limit Cap</span>
-            <div class="text-2xl font-bold font-mono text-cyan-600 dark:text-navy-cyan mt-1.5">
-                {{ bp.credit_alert_threshold }}
-            </div>
-            <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-1 block">Provisioned quota allowance</span>
-        </div>
-
-        <!-- Quota Consumed -->
-        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-amber-500/40 transition-all">
-            <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Characters Consumed</span>
-            <div class="text-2xl font-bold font-mono text-amber-500 dark:text-amber-400 mt-1.5">
-                {% if credit_info and not credit_info.error %}{{ credit_info.character_count }}{% else %}N/A{% endif %}
-            </div>
-            <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-1 block">Live ElevenLabs usage</span>
-        </div>
-
-        <!-- Remaining Quota -->
-        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-emerald-500/40 transition-all">
-            <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Remaining Balance</span>
-            <div class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-1.5">
-                {% if credit_info and not credit_info.error %}{{ credit_info.character_limit|add:"-"|add:credit_info.character_count|default:"0" }}{% else %}N/A{% endif %}
-            </div>
-            <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-1 block">Characters available</span>
-        </div>
-
-        <!-- API Node Status -->
-        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-indigo-500/40 transition-all flex flex-col justify-between">
+    <!-- Informative Alerts & Integration Notices -->
+    {% if not bp.elevenlabs_api_key %}
+    <div class="p-4 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-800 dark:text-cyan-300 flex items-center justify-between gap-4 text-xs">
+        <div class="flex items-center gap-3">
+            <iconify-icon icon="lucide:info" class="text-xl text-cyan-600 dark:text-navy-cyan flex-shrink-0"></iconify-icon>
             <div>
-                <span class="text-[11px] font-semibold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">API Integration</span>
-                <div class="text-base font-bold font-mono text-slate-900 dark:text-white mt-1.5 flex items-center gap-2">
-                    {% if bp.elevenlabs_api_key and not api_error %}
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                    <span class="text-emerald-600 dark:text-emerald-400 text-sm">Synchronized</span>
-                    {% elif bp.elevenlabs_api_key and api_error %}
-                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                    <span class="text-amber-500 text-sm">Sync Error</span>
-                    {% else %}
-                    <span class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-                    <span class="text-slate-400 text-sm">No Key Configured</span>
-                    {% endif %}
+                <strong class="font-semibold block text-sm">ElevenLabs API Key Not Yet Configured</strong>
+                <p class="text-cyan-700 dark:text-cyan-300/80 mt-0.5">Please configure an API Key for this partner to fetch live quota usage. Showing baseline allocation credits below.</p>
+            </div>
+        </div>
+        <a href="{% url 'admin_panel:bp_update' bp.pk %}" class="px-3 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-900 dark:text-white rounded-xl font-medium transition-colors flex-shrink-0">
+            Configure Key
+        </a>
+    </div>
+    {% elif api_error %}
+    <div class="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300 flex items-center justify-between gap-4 text-xs">
+        <div class="flex items-center gap-3">
+            <iconify-icon icon="lucide:alert-triangle" class="text-xl text-amber-500 flex-shrink-0"></iconify-icon>
+            <div>
+                <strong class="font-semibold block text-sm">ElevenLabs API Notice</strong>
+                <p class="text-amber-700 dark:text-amber-300/80 mt-0.5">{{ api_error }} — Showing latest cached snapshot data.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 4 Interactive Credit KPI Boxes -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <!-- 1. Total Credits Box -->
+        <div class="group p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-cyan-500/50 dark:hover:border-navy-cyan/50 hover:shadow-md hover:shadow-cyan-500/5 transition-all duration-200 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Total Credits</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Allocated Cycle Quota</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-navy-cyan group-hover:scale-110 transition-transform">
+                    <iconify-icon icon="lucide:coins" class="text-lg"></iconify-icon>
                 </div>
             </div>
-            <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 text-[11px] flex items-center justify-between">
-                <span class="text-slate-400 dark:text-navy-muted">11lab Agent ID:</span>
-                <span class="font-mono font-medium text-slate-700 dark:text-slate-200 truncate max-w-[140px]" title="{{ bp.elevenlabs_agent_id }}">
-                    {{ bp.elevenlabs_agent_id|default:"Not Set" }}
-                </span>
+            <div class="mt-4">
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl sm:text-3xl font-bold font-mono text-cyan-600 dark:text-navy-cyan tracking-tight">
+                        {{ character_limit|intcomma }}
+                    </span>
+                    <span class="text-xs font-mono text-slate-400 dark:text-navy-muted">chars</span>
+                </div>
+                <div class="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
+                    <span>Provisioned Tier</span>
+                    <span class="font-mono font-medium text-slate-700 dark:text-slate-300">{{ credit_info.tier|default:"Standard"|title }}</span>
+                </div>
             </div>
         </div>
+
+        <!-- 2. Consumed Box -->
+        <div class="group p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-amber-500/50 dark:hover:border-amber-400/50 hover:shadow-md hover:shadow-amber-500/5 transition-all duration-200 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Consumed</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Used This Billing Period</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
+                    <iconify-icon icon="lucide:flame" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl sm:text-3xl font-bold font-mono text-amber-500 dark:text-amber-400 tracking-tight">
+                        {{ character_count|intcomma }}
+                    </span>
+                    <span class="text-xs font-mono text-slate-400 dark:text-navy-muted">chars</span>
+                </div>
+                <div class="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
+                    <span>Consumption Rate</span>
+                    <span class="font-mono font-medium text-amber-600 dark:text-amber-400">{{ usage_percentage }}%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Remaining Box -->
+        <div class="group p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-emerald-500/50 dark:hover:border-emerald-400/50 hover:shadow-md hover:shadow-emerald-500/5 transition-all duration-200 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Remaining</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Available Balance</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                    <iconify-icon icon="lucide:sparkles" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl sm:text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
+                        {{ remaining|intcomma }}
+                    </span>
+                    <span class="text-xs font-mono text-slate-400 dark:text-navy-muted">chars</span>
+                </div>
+                <div class="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
+                    <span>Available Buffer</span>
+                    <span class="font-mono font-medium text-emerald-600 dark:text-emerald-400">{{ remaining_percentage }}%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Credit Limit Cap Box -->
+        <div class="group p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-indigo-500/50 dark:hover:border-indigo-400/50 hover:shadow-md hover:shadow-indigo-500/5 transition-all duration-200 flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Credit Limit Cap</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Partner Quota Cap</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                    <iconify-icon icon="lucide:shield-alert" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex items-baseline gap-1.5">
+                    <span class="text-2xl sm:text-3xl font-bold font-mono text-indigo-600 dark:text-indigo-400 tracking-tight">
+                        {{ bp.credit_alert_threshold|intcomma }}
+                    </span>
+                    <span class="text-xs font-mono text-slate-400 dark:text-navy-muted">credits</span>
+                </div>
+                <div class="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
+                    <span>Alert Trigger Point</span>
+                    <span class="font-mono font-medium text-indigo-600 dark:text-indigo-400">&le; {{ bp.credit_alert_threshold|intcomma }}{% if bp.credit_alert_threshold <= 100 %}%{% else %} credits{% endif %} remaining</span>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- Available Voices Table -->
@@ -232,6 +322,53 @@
             </table>
         </div>
     </div>
+
+    <!-- Credit Consumption Log Table -->
+    {% if recent_snapshots %}
+    <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm space-y-4 transition-colors duration-150">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-navy-border/70 pb-4">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <iconify-icon icon="lucide:history" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                    Credit Consumption Log
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">Historical credit allocations and usage captured by system snapshots</p>
+            </div>
+            <span class="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-navy-border">
+                {{ recent_snapshots|length }} Snapshots Recorded
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 dark:border-navy-border/70 bg-slate-50 dark:bg-[#121327] text-slate-500 dark:text-navy-muted uppercase font-mono text-[10px]">
+                        <th class="py-3 px-4">Date</th>
+                        <th class="py-3 px-4">Allocated Limit</th>
+                        <th class="py-3 px-4">Consumed</th>
+                        <th class="py-3 px-4">Remaining</th>
+                        <th class="py-3 px-4">Usage Rate</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-navy-border/50 text-slate-700 dark:text-slate-300">
+                    {% for snap in recent_snapshots %}
+                    <tr class="hover:bg-slate-50/80 dark:hover:bg-navy-800/40 transition-colors">
+                        <td class="py-3 px-4 font-bold text-slate-900 dark:text-white">{{ snap.snapshot_date|date:"M d, Y" }}</td>
+                        <td class="py-3 px-4 font-mono text-cyan-600 dark:text-navy-cyan">{{ snap.character_limit|intcomma }} chars</td>
+                        <td class="py-3 px-4 font-mono text-amber-500 dark:text-amber-400">{{ snap.character_count|intcomma }} chars</td>
+                        <td class="py-3 px-4 font-mono text-emerald-600 dark:text-emerald-400">{{ snap.remaining|intcomma }} chars</td>
+                        <td class="py-3 px-4 font-mono font-semibold">
+                            <span class="{% if snap.usage_percentage > 90 %}text-rose-500{% elif snap.usage_percentage > 75 %}text-amber-500{% else %}text-emerald-600 dark:text-emerald-400{% endif %}">
+                                {{ snap.usage_percentage }}%
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 
 </div>
 {% endblock %}

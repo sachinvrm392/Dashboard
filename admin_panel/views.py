@@ -277,22 +277,58 @@ def bp_empty_trash(request):
 def bp_detail(request, pk):
     bp = get_object_or_404(BusinessPartner, pk=pk)
     
-    credit_info = None
+    # 1. Fetch latest stored snapshot from DB if available as baseline
+    latest_snapshot = CreditSnapshot.objects.filter(business_partner=bp).order_by('-snapshot_date', '-created_at').first()
+    
+    character_limit = latest_snapshot.character_limit if (latest_snapshot and latest_snapshot.character_limit > 0) else (bp.credit_alert_threshold or 10000)
+    character_count = latest_snapshot.character_count if latest_snapshot else 0
+    
+    credit_info = {}
     voices = []
-    api_error = False
+    api_error = None
+    is_live = False
     
     if bp.elevenlabs_api_key:
-        try:
-            credit_info = ElevenLabsService.get_subscription_info(bp.elevenlabs_api_key)
-            voices = ElevenLabsService.get_voices(bp.elevenlabs_api_key)
-        except Exception:
-            api_error = True
+        api_key = bp.elevenlabs_api_key.strip()
+        credit_info = ElevenLabsService.get_subscription_info(api_key)
+        if credit_info.get('error'):
+            api_error = credit_info.get('message')
+        else:
+            is_live = True
+            character_limit = credit_info.get('character_limit', character_limit)
+            character_count = credit_info.get('character_count', character_count)
+            voices = ElevenLabsService.get_voices(api_key)
+            
+            # Record or update today's snapshot
+            today = timezone.localdate()
+            CreditSnapshot.objects.update_or_create(
+                business_partner=bp,
+                snapshot_date=today,
+                defaults={
+                    'character_count': character_count,
+                    'character_limit': character_limit
+                }
+            )
+            
+    remaining = max(0, character_limit - character_count)
+    usage_percentage = round((character_count / character_limit * 100), 1) if character_limit else 0.0
+    remaining_percentage = round(max(0.0, 100.0 - usage_percentage), 1)
+    
+    recent_snapshots = CreditSnapshot.objects.filter(business_partner=bp).order_by('-snapshot_date')[:30]
             
     context = {
         'bp': bp,
         'credit_info': credit_info,
+        'character_limit': character_limit,
+        'character_count': character_count,
+        'remaining': remaining,
+        'usage_percentage': usage_percentage,
+        'remaining_percentage': remaining_percentage,
         'voices': voices,
-        'api_error': api_error
+        'recent_snapshots': recent_snapshots,
+        'api_error': api_error,
+        'is_live': is_live,
+        'active_nav': 'partners',
     }
     
     return render(request, 'admin_panel/bp_detail.html', context)
