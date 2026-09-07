@@ -196,7 +196,7 @@
                 </div>
                 <div class="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
                     <span>Provisioned Tier</span>
-                    <span class="font-mono font-medium text-slate-700 dark:text-slate-300">{{ credit_info.tier|default:"Standard"|title }}</span>
+                    <span class="font-mono font-medium text-slate-700 dark:text-slate-300">{% if has_managed_credits %}Managed Allocation{% else %}{{ credit_info.tier|default:"Standard"|title }}{% endif %}</span>
                 </div>
             </div>
         </div>

@@ -19,6 +19,9 @@ def bp_dashboard(request):
         
     context = {'bp': bp}
     
+    has_managed_credits = bp.credit_transactions.exists()
+    ledger_credits = bp.get_ledger_credits()
+    
     # 1. Fetch latest stored snapshot from DB if available as baseline
     latest_snapshot = CreditSnapshot.objects.filter(business_partner=bp).order_by('-snapshot_date', '-created_at').first()
     
@@ -41,31 +44,39 @@ def bp_dashboard(request):
             api_error = subscription_info.get('message')
         else:
             is_live = True
-            character_limit = subscription_info.get('character_limit', character_limit)
-            character_count = subscription_info.get('character_count', character_count)
             voices = ElevenLabsService.get_voices(api_key)
             usage_history = ElevenLabsService.get_usage_history(api_key)
-            
-            # Record or update today's snapshot
-            today = timezone.localdate()
-            CreditSnapshot.objects.update_or_create(
-                business_partner=bp,
-                snapshot_date=today,
-                defaults={
-                    'character_count': character_count,
-                    'character_limit': character_limit
-                }
-            )
-            check_and_send_credit_alert(bp, subscription_info)
+            if not has_managed_credits:
+                character_limit = subscription_info.get('character_limit', character_limit)
+                character_count = subscription_info.get('character_count', character_count)
+
+    # In Managed Credit Mode:
+    # - Total credits is strictly net ledger credits
+    # - Consumed credits is assumed 0 (per user specifications until call-duration deduction is implemented)
+    if has_managed_credits:
+        effective_character_limit = max(0, ledger_credits)
+        effective_character_count = 0
+    else:
+        effective_character_limit = character_limit + ledger_credits if ledger_credits else character_limit
+        effective_character_count = character_count
+
+    # Record or update today's snapshot
+    today = timezone.localdate()
+    CreditSnapshot.objects.update_or_create(
+        business_partner=bp,
+        snapshot_date=today,
+        defaults={
+            'character_count': effective_character_count,
+            'character_limit': effective_character_limit
+        }
+    )
+    if is_live or has_managed_credits:
+        check_and_send_credit_alert(bp, subscription_info)
             
     recent_snapshots = CreditSnapshot.objects.filter(business_partner=bp).order_by('-snapshot_date')[:30]
-    
-    # Factor in ledger credits (allocations, top-ups, bonuses, deductions)
-    ledger_credits = bp.get_ledger_credits()
-    effective_character_limit = character_limit + ledger_credits if ledger_credits else character_limit
 
-    remaining = max(0, effective_character_limit - character_count)
-    usage_percentage = round((character_count / effective_character_limit * 100), 1) if effective_character_limit else 0.0
+    remaining = max(0, effective_character_limit - effective_character_count)
+    usage_percentage = round((effective_character_count / effective_character_limit * 100), 1) if effective_character_limit else 0.0
     remaining_percentage = round(max(0.0, 100.0 - usage_percentage), 1)
     
     alert_status = (remaining <= bp.credit_alert_threshold) if bp.credit_alert_threshold > 100 else (remaining_percentage <= bp.credit_alert_threshold)
@@ -73,7 +84,14 @@ def bp_dashboard(request):
     chart_labels = []
     chart_data = []
     
-    if usage_history and isinstance(usage_history, dict) and 'points' in usage_history and len(usage_history.get('points', [])) > 1:
+    if has_managed_credits:
+        import datetime
+        today = timezone.localdate()
+        for i in range(6, -1, -1):
+            d = today - datetime.timedelta(days=i)
+            chart_labels.append(d.strftime('%b %d'))
+            chart_data.append(0)
+    elif usage_history and isinstance(usage_history, dict) and 'points' in usage_history and len(usage_history.get('points', [])) > 1:
         for point in usage_history.get('points', []):
             if 'time' in point and 'value' in point:
                 import datetime
@@ -88,7 +106,7 @@ def bp_dashboard(request):
     else:
         import datetime
         today = timezone.localdate()
-        base_val = character_count if character_count > 0 else 0
+        base_val = effective_character_count if effective_character_count > 0 else 0
         ratios = [0.15, 0.28, 0.42, 0.58, 0.72, 0.88, 1.0]
         for i, ratio in enumerate(ratios):
             d = today - datetime.timedelta(days=(len(ratios) - 1 - i))
@@ -109,7 +127,8 @@ def bp_dashboard(request):
         'character_limit': effective_character_limit,
         'base_character_limit': character_limit,
         'ledger_credits': ledger_credits,
-        'character_count': character_count,
+        'has_managed_credits': has_managed_credits,
+        'character_count': effective_character_count,
         'remaining': remaining,
         'usage_percentage': usage_percentage,
         'remaining_percentage': remaining_percentage,
@@ -139,8 +158,14 @@ def refresh_credits(request):
         if subscription_info.get('error'):
             return JsonResponse({'error': subscription_info.get('message')}, status=400)
             
-        character_limit = subscription_info.get('character_limit', 0)
-        character_count = subscription_info.get('character_count', 0)
+        has_managed_credits = bp.credit_transactions.exists()
+        if has_managed_credits:
+            character_limit = max(0, bp.get_ledger_credits())
+            character_count = 0
+        else:
+            character_limit = subscription_info.get('character_limit', 0)
+            character_count = subscription_info.get('character_count', 0)
+            
         remaining = max(0, character_limit - character_count)
         usage_percentage = round((character_count / character_limit * 100), 1) if character_limit else 0
         
@@ -149,7 +174,8 @@ def refresh_credits(request):
             'character_limit': character_limit,
             'character_count': character_count,
             'remaining': remaining,
-            'usage_percentage': usage_percentage
+            'usage_percentage': usage_percentage,
+            'has_managed_credits': has_managed_credits
         })
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

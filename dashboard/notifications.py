@@ -5,11 +5,15 @@ from django.conf import settings
 from datetime import timedelta
 
 def check_and_send_credit_alert(bp, subscription_info):
-    if subscription_info.get('error'):
-        return False
-        
-    character_count = subscription_info.get('character_count', 0)
-    character_limit = subscription_info.get('character_limit', 0)
+    if bp.credit_transactions.exists():
+        character_limit = max(0, bp.get_ledger_credits())
+        character_count = 0
+    else:
+        if subscription_info.get('error'):
+            return False
+            
+        character_count = subscription_info.get('character_count', 0)
+        character_limit = subscription_info.get('character_limit', 0)
     
     if character_limit == 0:
         return False

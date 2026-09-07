@@ -30,15 +30,35 @@ def admin_dashboard(request):
     latest_bps = list(bps[:5])
     
     for bp in latest_bps:
+        has_managed = bp.credit_transactions.exists()
         bp_info = {
             'bp': bp,
             'credit_info': None,
             'api_error': False,
             'remaining': 0,
             'usage_percentage': 0.0,
+            'has_managed_credits': has_managed,
+            'character_limit': 0,
+            'character_count': 0,
         }
         
-        if bp.elevenlabs_api_key:
+        if has_managed:
+            char_limit = max(0, bp.get_ledger_credits())
+            char_count = 0
+            bp_info['remaining'] = max(0, char_limit - char_count)
+            bp_info['usage_percentage'] = 0.0
+            bp_info['character_limit'] = char_limit
+            bp_info['character_count'] = char_count
+            total_credits_used_all += char_count
+            total_credit_limit_all += char_limit
+            if bp.elevenlabs_api_key:
+                try:
+                    credit_info = ElevenLabsService.get_subscription_info(bp.elevenlabs_api_key)
+                    if not credit_info.get('error'):
+                        bp_info['credit_info'] = credit_info
+                except Exception:
+                    pass
+        elif bp.elevenlabs_api_key:
             try:
                 credit_info = ElevenLabsService.get_subscription_info(bp.elevenlabs_api_key)
                 if not credit_info.get('error'):
@@ -49,6 +69,8 @@ def admin_dashboard(request):
                     usage_pct = round((char_count / char_limit * 100), 1) if char_limit else 0
                     bp_info['remaining'] = remaining
                     bp_info['usage_percentage'] = usage_pct
+                    bp_info['character_limit'] = char_limit
+                    bp_info['character_count'] = char_count
                     total_credits_used_all += char_count
                     total_credit_limit_all += char_limit
                 else:
@@ -130,14 +152,32 @@ def bp_list(request):
     bp_data_list = []
     bps_page_list = list(page_obj.object_list)
     for bp in bps_page_list:
+        has_managed = bp.credit_transactions.exists()
         bp_info = {
             'bp': bp,
             'credit_info': None,
             'api_error': False,
             'remaining': 0,
             'usage_percentage': 0.0,
+            'has_managed_credits': has_managed,
+            'character_limit': 0,
+            'character_count': 0,
         }
-        if bp.elevenlabs_api_key:
+        if has_managed:
+            char_limit = max(0, bp.get_ledger_credits())
+            char_count = 0
+            bp_info['remaining'] = max(0, char_limit - char_count)
+            bp_info['usage_percentage'] = 0.0
+            bp_info['character_limit'] = char_limit
+            bp_info['character_count'] = char_count
+            if bp.elevenlabs_api_key:
+                try:
+                    credit_info = ElevenLabsService.get_subscription_info(bp.elevenlabs_api_key)
+                    if not credit_info.get('error'):
+                        bp_info['credit_info'] = credit_info
+                except Exception:
+                    pass
+        elif bp.elevenlabs_api_key:
             try:
                 credit_info = ElevenLabsService.get_subscription_info(bp.elevenlabs_api_key)
                 if not credit_info.get('error'):
@@ -146,6 +186,8 @@ def bp_list(request):
                     char_count = credit_info.get('character_count', 0)
                     bp_info['remaining'] = max(0, char_limit - char_count)
                     bp_info['usage_percentage'] = round((char_count / char_limit * 100), 1) if char_limit else 0
+                    bp_info['character_limit'] = char_limit
+                    bp_info['character_count'] = char_count
                 else:
                     bp_info['api_error'] = True
             except Exception:
@@ -288,6 +330,9 @@ def bp_detail(request, pk):
     api_error = None
     is_live = False
     
+    has_managed_credits = bp.credit_transactions.exists()
+    ledger_credits = bp.get_ledger_credits()
+
     if bp.elevenlabs_api_key:
         api_key = bp.elevenlabs_api_key.strip()
         credit_info = ElevenLabsService.get_subscription_info(api_key)
@@ -295,27 +340,32 @@ def bp_detail(request, pk):
             api_error = credit_info.get('message')
         else:
             is_live = True
-            character_limit = credit_info.get('character_limit', character_limit)
-            character_count = credit_info.get('character_count', character_count)
+            if not has_managed_credits:
+                character_limit = credit_info.get('character_limit', character_limit)
+                character_count = credit_info.get('character_count', character_count)
             voices = ElevenLabsService.get_voices(api_key)
             
-            # Record or update today's snapshot
-            today = timezone.localdate()
-            CreditSnapshot.objects.update_or_create(
-                business_partner=bp,
-                snapshot_date=today,
-                defaults={
-                    'character_count': character_count,
-                    'character_limit': character_limit
-                }
-            )
-            
-    # Factor in ledger credits (allocations, top-ups, bonuses, deductions)
-    ledger_credits = bp.get_ledger_credits()
-    effective_character_limit = character_limit + ledger_credits if ledger_credits else character_limit
+    if has_managed_credits:
+        effective_character_limit = max(0, ledger_credits)
+        effective_character_count = 0
+    else:
+        effective_character_limit = character_limit + ledger_credits if ledger_credits else character_limit
+        effective_character_count = character_count
 
-    remaining = max(0, effective_character_limit - character_count)
-    usage_percentage = round((character_count / effective_character_limit * 100), 1) if effective_character_limit else 0.0
+    # Record or update today's snapshot
+    if is_live or has_managed_credits:
+        today = timezone.localdate()
+        CreditSnapshot.objects.update_or_create(
+            business_partner=bp,
+            snapshot_date=today,
+            defaults={
+                'character_count': effective_character_count,
+                'character_limit': effective_character_limit
+            }
+        )
+
+    remaining = max(0, effective_character_limit - effective_character_count)
+    usage_percentage = round((effective_character_count / effective_character_limit * 100), 1) if effective_character_limit else 0.0
     remaining_percentage = round(max(0.0, 100.0 - usage_percentage), 1)
     
     recent_snapshots = CreditSnapshot.objects.filter(business_partner=bp).order_by('-snapshot_date')[:30]
@@ -326,7 +376,8 @@ def bp_detail(request, pk):
         'character_limit': effective_character_limit,
         'base_character_limit': character_limit,
         'ledger_credits': ledger_credits,
-        'character_count': character_count,
+        'has_managed_credits': has_managed_credits,
+        'character_count': effective_character_count,
         'remaining': remaining,
         'usage_percentage': usage_percentage,
         'remaining_percentage': remaining_percentage,

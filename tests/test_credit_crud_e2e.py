@@ -86,8 +86,10 @@ class CreditCRUDE2ETestCase(TestCase):
         res = self.client.get(bp_detail_url)
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.context['ledger_credits'], 25000)
-        # Base was 1,000 credit_alert_threshold; effective should be 1,000 + 25,000 = 26,000
-        self.assertEqual(res.context['character_limit'], self.bp.credit_alert_threshold + 25000)
+        # In Managed Credit Mode, character_limit is strictly the allocated ledger credits
+        self.assertEqual(res.context['character_limit'], 25000)
+        self.assertEqual(res.context['character_count'], 0)
+        self.assertEqual(res.context['remaining'], 25000)
         
         # 5. UPDATE: Edit the transaction amount to 30,000
         update_url = reverse('admin_panel:credit_update', kwargs={'pk': tx.pk})
