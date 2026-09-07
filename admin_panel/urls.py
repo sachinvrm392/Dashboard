@@ -17,4 +17,9 @@ urlpatterns = [
     path('bp/<int:pk>/reset-password/', views.bp_reset_password, name='bp_reset_password'),
     path('bp/<int:pk>/', views.bp_detail, name='bp_detail'),
     path('profile/', views.user_profile, name='profile'),
+    path('credits/', views.credit_list, name='credit_list'),
+    path('credits/add/', views.credit_create, name='credit_create'),
+    path('credits/<int:pk>/edit/', views.credit_update, name='credit_update'),
+    path('credits/<int:pk>/delete/', views.credit_delete, name='credit_delete'),
+    path('bp/<int:bp_id>/credits/', views.bp_credit_ledger, name='bp_credit_ledger'),
 ]

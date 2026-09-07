@@ -9,6 +9,8 @@
                     Dashboard
                 {% elif request.resolver_match.url_name == 'profile' %}
                     Account
+                {% elif 'credit' in request.resolver_match.url_name %}
+                    Manage Credits
                 {% elif 'bp_' in request.resolver_match.url_name or request.resolver_match.url_name == 'bp_list' %}
                     Business Partners
                 {% else %}
@@ -30,6 +32,14 @@
                         Modify Partner Profile
                     {% elif request.resolver_match.url_name == 'bp_detail' %}
                         Partner Quota &amp; Activity
+                    {% elif request.resolver_match.url_name == 'credit_list' %}
+                        Manage Business Partner Credits
+                    {% elif request.resolver_match.url_name == 'credit_create' %}
+                        Add Credit Transaction
+                    {% elif request.resolver_match.url_name == 'credit_update' %}
+                        Update Credit Transaction
+                    {% elif request.resolver_match.url_name == 'bp_credit_ledger' %}
+                        Partner Credit Ledger
                     {% elif request.resolver_match.url_name == 'profile' %}
                         User Profile &amp; Settings
                     {% else %}

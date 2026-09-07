@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ bp.company_name }} — Credit Ledger — Leads Management CRM{% endblock %}
+
+{% block header_left %}
+<div class="flex items-center gap-3">
+    <a href="{% url 'admin_panel:bp_detail' bp.pk %}" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-border flex items-center justify-center text-slate-500 dark:text-navy-muted hover:text-slate-900 dark:hover:text-white hover:border-cyan-500 transition-all shadow-sm group" title="Return to Partner Dossier">
+        <iconify-icon icon="lucide:arrow-left" class="text-sm group-hover:-translate-x-0.5 transition-transform"></iconify-icon>
+    </a>
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'admin_panel:credit_list' %}" class="text-xs text-slate-500 dark:text-navy-muted hover:text-slate-900 dark:hover:text-white transition-colors">Manage Credits</a>
+            <span class="text-xs text-slate-400 dark:text-navy-muted">/</span>
+            <a href="{% url 'admin_panel:bp_detail' bp.pk %}" class="text-xs text-slate-500 dark:text-navy-muted hover:text-slate-900 dark:hover:text-white transition-colors">{{ bp.company_name }}</a>
+            <span class="text-xs text-slate-400 dark:text-navy-muted">/</span>
+            <h1 class="font-display text-sm font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                <span>Credit Ledger</span>
+                <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-cyan-500/15 text-cyan-600 dark:text-navy-cyan border border-cyan-500/30">
+                    PARTNER LEDGER
+                </span>
+            </h1>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block header_right %}
+<div class="flex items-center gap-3">
+    <button type="button" onclick="toggleTheme()" 
+        class="p-2 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800/80 hover:bg-slate-200 dark:hover:bg-navy-800 text-slate-600 dark:text-navy-cyan transition-all shadow-sm flex items-center justify-center group active:scale-95" 
+        title="Toggle Light / Dark theme">
+        <iconify-icon icon="lucide:sun" class="text-base hidden dark:inline text-amber-400 group-hover:rotate-45 transition-transform duration-300"></iconify-icon>
+        <iconify-icon icon="lucide:moon" class="text-base inline dark:hidden text-indigo-600 group-hover:-rotate-12 transition-transform duration-300"></iconify-icon>
+    </button>
+
+    <a href="{% url 'admin_panel:credit_create' %}?bp={{ bp.pk }}" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/20 flex items-center gap-2 transition-all transform active:scale-95">
+        <iconify-icon icon="lucide:plus-circle" class="text-sm"></iconify-icon>
+        <span>Add Credit for {{ bp.company_name }}</span>
+    </a>
+
+    <a href="{% url 'admin_panel:bp_detail' bp.pk %}" class="px-3.5 py-1.5 bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-navy-border rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+        <iconify-icon icon="lucide:arrow-left" class="text-xs"></iconify-icon>
+        <span>Back to Dossier</span>
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Partner Banner & Ledger KPIs -->
+    <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 transition-colors duration-150">
+        <div class="flex items-center gap-4 text-center md:text-left">
+            {% if bp.logo %}
+            <img src="{{ bp.logo.url }}" class="w-14 h-14 rounded-2xl object-cover border border-slate-200 dark:border-white/10 shadow-md" alt="logo">
+            {% else %}
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-[#00d2ff] via-indigo-500 to-purple-600 flex items-center justify-center font-bold text-slate-950 text-xl shadow-md">
+                {{ bp.company_name|slice:":2"|upper }}
+            </div>
+            {% endif %}
+            <div>
+                <h2 class="text-lg font-bold text-slate-900 dark:text-white">{{ bp.company_name }}</h2>
+                <p class="text-xs text-slate-500 dark:text-navy-muted">
+                    Contact: <span class="text-slate-700 dark:text-slate-200 font-medium">{{ bp.contact_person }}</span> &bull; 
+                    <span class="font-mono">{{ bp.email }}</span>
+                </p>
+                <div class="pt-1 flex items-center gap-2 text-[11px] text-slate-400 dark:text-navy-muted font-mono">
+                    <span>Credit Cap: <strong>{{ bp.credit_alert_threshold|intcomma }}</strong></span>
+                    {% if bp.elevenlabs_agent_id %}
+                    <span>&bull;</span>
+                    <span>Agent: <strong>{{ bp.elevenlabs_agent_id }}</strong></span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <a href="{% url 'admin_panel:credit_create' %}?bp={{ bp.pk }}" class="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/30 text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+                <iconify-icon icon="lucide:plus" class="text-sm"></iconify-icon>
+                <span>New Allocation</span>
+            </a>
+            <a href="{% url 'admin_panel:credit_list' %}" class="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800 hover:bg-slate-100 dark:hover:bg-navy-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5 shadow-sm">
+                <iconify-icon icon="lucide:list" class="text-sm"></iconify-icon>
+                <span>All Partners Ledger</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- 3 Quick KPI Boxes for this Partner -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Net Credits -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-cyan-500/40 transition-all flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Net Ledger Credits</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Net Managed Additions</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-navy-cyan">
+                    <iconify-icon icon="lucide:wallet" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-cyan-600 dark:text-navy-cyan tracking-tight">
+                    {{ net_ledger|intcomma }}
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 text-[11px] text-slate-500 dark:text-navy-muted">
+                    Total Inflow minus Deductions
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Positive Inflow -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-emerald-500/40 transition-all flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Total Top-Ups &amp; Allocations</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Total Added Credits</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                    <iconify-icon icon="lucide:arrow-up-right" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
+                    +{{ total_allocated|intcomma }}
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 text-[11px] text-slate-500 dark:text-navy-muted">
+                    Allocations, top-ups &amp; bonuses
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Deductions -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-rose-500/40 transition-all flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Total Deductions</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Corrections / Reductions</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                    <iconify-icon icon="lucide:arrow-down-left" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-rose-600 dark:text-rose-400 tracking-tight">
+                    -{{ total_deducted|intcomma }}
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 text-[11px] text-slate-500 dark:text-navy-muted">
+                    Manual corrections or expired
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Partner Transaction History Table -->
+    <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-navy-border/70 pb-4">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <iconify-icon icon="lucide:history" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                    <span>Transaction History for {{ bp.company_name }}</span>
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">Chronological record of all credit adjustments made for this account</p>
+            </div>
+            <span class="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-navy-border">
+                {{ transactions|length }} Records
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 dark:border-navy-border/70 bg-slate-50 dark:bg-[#121327] text-slate-500 dark:text-navy-muted uppercase font-mono text-[10px]">
+                        <th class="py-3 px-4">#ID</th>
+                        <th class="py-3 px-4">Date</th>
+                        <th class="py-3 px-4">Type</th>
+                        <th class="py-3 px-4">Amount</th>
+                        <th class="py-3 px-4">Description / Purpose</th>
+                        <th class="py-3 px-4">Reference ID</th>
+                        <th class="py-3 px-4">Logged By</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-navy-border/50 text-slate-700 dark:text-slate-300">
+                    {% for tx in transactions %}
+                    <tr class="hover:bg-slate-50/80 dark:hover:bg-navy-800/40 transition-colors">
+                        <td class="py-3.5 px-4 font-mono text-slate-400 dark:text-navy-muted">#{{ tx.pk }}</td>
+                        <td class="py-3.5 px-4 font-bold text-slate-900 dark:text-white whitespace-nowrap">{{ tx.transaction_date|date:"M d, Y" }}</td>
+                        <td class="py-3.5 px-4 whitespace-nowrap">
+                            {% if tx.transaction_type == 'ALLOCATION' %}
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-600 dark:text-navy-cyan border border-cyan-500/30">Allocation</span>
+                            {% elif tx.transaction_type == 'TOP_UP' %}
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">Top-Up</span>
+                            {% elif tx.transaction_type == 'BONUS' %}
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30">Bonus</span>
+                            {% else %}
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">Deduction</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 font-mono font-bold whitespace-nowrap">
+                            {% if tx.is_credit %}
+                            <span class="text-emerald-600 dark:text-emerald-400">+{{ tx.amount|intcomma }}</span>
+                            {% else %}
+                            <span class="text-rose-600 dark:text-rose-400">-{{ tx.amount|intcomma }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-600 dark:text-slate-300 max-w-xs truncate" title="{{ tx.description }}">
+                            {{ tx.description|default:"—" }}
+                        </td>
+                        <td class="py-3.5 px-4 font-mono text-[11px] text-slate-500 dark:text-navy-muted">
+                            {{ tx.reference_id|default:"—" }}
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-500 dark:text-navy-muted text-[11px]">
+                            {% if tx.created_by %}@{{ tx.created_by.username }}{% else %}System{% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <a href="{% url 'admin_panel:credit_update' tx.pk %}?next={{ request.get_full_path|urlencode }}" class="p-1.5 rounded-lg text-slate-500 dark:text-navy-muted hover:text-amber-500 hover:bg-amber-500/10 transition-colors" title="Edit Record">
+                                    <iconify-icon icon="lucide:edit-3" class="text-sm"></iconify-icon>
+                                </a>
+                                <form action="{% url 'admin_panel:credit_delete' tx.pk %}" method="post" class="inline" onsubmit="return confirm('Are you sure you want to void / delete this credit transaction of {{ tx.amount }} credits?');">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                                    <button type="submit" class="p-1.5 rounded-lg text-slate-500 dark:text-navy-muted hover:text-rose-500 hover:bg-rose-500/10 transition-colors" title="Delete Transaction">
+                                        <iconify-icon icon="lucide:trash-2" class="text-sm"></iconify-icon>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="py-12 text-center text-slate-400 dark:text-navy-muted">
+                            <iconify-icon icon="lucide:wallet" class="text-3xl mb-2"></iconify-icon>
+                            <p class="text-sm font-semibold">No credit transactions recorded for {{ bp.company_name }} yet</p>
+                            <div class="mt-4">
+                                <a href="{% url 'admin_panel:credit_create' %}?bp={{ bp.pk }}" class="px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-navy-cyan rounded-xl text-xs font-semibold transition-colors inline-flex items-center gap-1.5 border border-cyan-500/30">
+                                    <iconify-icon icon="lucide:plus" class="text-sm"></iconify-icon>
+                                    <span>Record Initial Allocation / Top-Up</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

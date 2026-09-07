@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_edit %}Edit Transaction #{{ transaction.pk }}{% else %}Add Credit Transaction{% endif %} — Leads Management CRM{% endblock %}
+
+{% block header_left %}
+<div class="flex items-center gap-3">
+    <a href="{% if target_bp %}{% url 'admin_panel:bp_credit_ledger' target_bp.pk %}{% else %}{% url 'admin_panel:credit_list' %}{% endif %}" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-border flex items-center justify-center text-slate-500 dark:text-navy-muted hover:text-slate-900 dark:hover:text-white hover:border-cyan-500 transition-all shadow-sm group" title="Return">
+        <iconify-icon icon="lucide:arrow-left" class="text-sm group-hover:-translate-x-0.5 transition-transform"></iconify-icon>
+    </a>
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'admin_panel:credit_list' %}" class="text-xs text-slate-500 dark:text-navy-muted hover:text-slate-900 dark:hover:text-white transition-colors">Manage Credits</a>
+            <span class="text-xs text-slate-400 dark:text-navy-muted">/</span>
+            <h1 class="font-display text-sm font-bold text-slate-900 dark:text-white tracking-tight">
+                {% if is_edit %}Edit Credit Transaction #{{ transaction.pk }}{% else %}Add Credit Transaction{% endif %}
+            </h1>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block header_right %}
+<div class="flex items-center gap-3">
+    <button type="button" onclick="toggleTheme()" 
+        class="p-2 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800/80 hover:bg-slate-200 dark:hover:bg-navy-800 text-slate-600 dark:text-navy-cyan transition-all shadow-sm flex items-center justify-center group active:scale-95" 
+        title="Toggle Light / Dark theme">
+        <iconify-icon icon="lucide:sun" class="text-base hidden dark:inline text-amber-400 group-hover:rotate-45 transition-transform duration-300"></iconify-icon>
+        <iconify-icon icon="lucide:moon" class="text-base inline dark:hidden text-indigo-600 group-hover:-rotate-12 transition-transform duration-300"></iconify-icon>
+    </button>
+    <a href="{% if target_bp %}{% url 'admin_panel:bp_credit_ledger' target_bp.pk %}{% else %}{% url 'admin_panel:credit_list' %}{% endif %}" class="px-3.5 py-1.5 bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-navy-border rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+        <iconify-icon icon="lucide:arrow-left" class="text-xs"></iconify-icon>
+        <span>Cancel</span>
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+    <!-- Page Intro Banner -->
+    <div class="bg-slate-50 dark:bg-[#161730] border border-slate-200 dark:border-navy-border rounded-2xl p-5 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-navy-cyan shadow-sm">
+                <iconify-icon icon="{% if is_edit %}lucide:edit-3{% else %}lucide:wallet{% endif %}" class="text-xl"></iconify-icon>
+            </div>
+            <div>
+                <h2 class="text-sm font-bold text-slate-900 dark:text-white tracking-tight">
+                    {% if is_edit %}Update Credit Transaction{% else %}Record Credit Adjustment / Top-Up{% endif %}
+                </h2>
+                <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">
+                    {% if is_edit %}Modify recorded credit transaction details and audit fields.{% else %}Allocate credits or apply top-ups to a partner's live credit balance.{% endif %}
+                </p>
+            </div>
+        </div>
+        <span class="text-[10px] font-mono font-bold text-cyan-600 dark:text-navy-cyan bg-cyan-50 dark:bg-[#141d3b] border border-cyan-500/40 px-2 py-1 rounded-md">
+            Super Admin
+        </span>
+    </div>
+
+    <!-- Form Card -->
+    <div class="bg-white dark:bg-[#161730] border border-slate-200 dark:border-navy-border rounded-2xl p-6 sm:p-8 shadow-sm transition-colors duration-150">
+        <form method="post" novalidate class="space-y-6">
+            {% csrf_token %}
+            {% if request.GET.next %}
+            <input type="hidden" name="next" value="{{ request.GET.next }}">
+            {% endif %}
+
+            {% if form.non_field_errors %}
+            <div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs">
+                {% for err in form.non_field_errors %}
+                <p>{{ err }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Business Partner -->
+            <div class="space-y-1.5">
+                <label for="{{ form.business_partner.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Business Partner <span class="text-rose-500">*</span>
+                </label>
+                <select name="{{ form.business_partner.name }}" id="{{ form.business_partner.id_for_label }}" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-cyan-500 transition-colors {% if form.business_partner.errors %}border-rose-500{% endif %}">
+                    <option value="">-- Select Partner --</option>
+                    {% for choice_val, choice_label in form.business_partner.field.choices %}
+                    {% if choice_val %}
+                    <option value="{{ choice_val }}" {% if form.business_partner.value|stringformat:"s" == choice_val|stringformat:"s" %}selected{% endif %}>
+                        {{ choice_label }}
+                    </option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+                {% if form.business_partner.errors %}
+                <p class="text-[11px] text-rose-500 mt-1">{{ form.business_partner.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Two Columns: Transaction Type & Amount -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <!-- Transaction Type -->
+                <div class="space-y-1.5">
+                    <label for="{{ form.transaction_type.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Transaction Type <span class="text-rose-500">*</span>
+                    </label>
+                    <select name="{{ form.transaction_type.name }}" id="{{ form.transaction_type.id_for_label }}" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-cyan-500 transition-colors {% if form.transaction_type.errors %}border-rose-500{% endif %}">
+                        {% for val, label in form.transaction_type.field.choices %}
+                        <option value="{{ val }}" {% if form.transaction_type.value == val %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    {% if form.transaction_type.errors %}
+                    <p class="text-[11px] text-rose-500 mt-1">{{ form.transaction_type.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Amount -->
+                <div class="space-y-1.5">
+                    <label for="{{ form.amount.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Amount (Credits) <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input type="number" name="{{ form.amount.name }}" id="{{ form.amount.id_for_label }}" value="{{ form.amount.value|default:'' }}" min="1" step="1" placeholder="e.g. 10000" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800 text-slate-900 dark:text-white text-xs font-mono focus:outline-none focus:border-cyan-500 transition-colors {% if form.amount.errors %}border-rose-500{% endif %}">
+                        <span class="absolute right-3 top-2.5 text-[11px] font-mono text-slate-400 dark:text-navy-muted">credits</span>
+                    </div>
+                    {% if form.amount.errors %}
+                    <p class="text-[11px] text-rose-500 mt-1">{{ form.amount.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Two Columns: Transaction Date & Reference ID -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <!-- Transaction Date -->
+                <div class="space-y-1.5">
+                    <label for="{{ form.transaction_date.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Transaction Date <span class="text-rose-500">*</span>
+                    </label>
+                    <input type="date" name="{{ form.transaction_date.name }}" id="{{ form.transaction_date.id_for_label }}" value="{{ form.transaction_date.value|default:'' }}" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800 text-slate-900 dark:text-white text-xs font-mono focus:outline-none focus:border-cyan-500 transition-colors {% if form.transaction_date.errors %}border-rose-500{% endif %}">
+                    {% if form.transaction_date.errors %}
+                    <p class="text-[11px] text-rose-500 mt-1">{{ form.transaction_date.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Reference ID -->
+                <div class="space-y-1.5">
+                    <label for="{{ form.reference_id.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        Invoice / Reference ID <span class="text-slate-400 text-[10px] font-normal">(Optional)</span>
+                    </label>
+                    <input type="text" name="{{ form.reference_id.name }}" id="{{ form.reference_id.id_for_label }}" value="{{ form.reference_id.value|default:'' }}" placeholder="e.g. INV-2026-0042" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800 text-slate-900 dark:text-white text-xs font-mono focus:outline-none focus:border-cyan-500 transition-colors">
+                    {% if form.reference_id.errors %}
+                    <p class="text-[11px] text-rose-500 mt-1">{{ form.reference_id.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Description / Note -->
+            <div class="space-y-1.5">
+                <label for="{{ form.description.id_for_label }}" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Reason / Description Note <span class="text-slate-400 text-[10px] font-normal">(Optional)</span>
+                </label>
+                <input type="text" name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" value="{{ form.description.value|default:'' }}" placeholder="e.g. Monthly allocation top-up, contract renewal bonus" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-cyan-500 transition-colors">
+                {% if form.description.errors %}
+                <p class="text-[11px] text-rose-500 mt-1">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Actions Row -->
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-navy-border/60">
+                <a href="{% if target_bp %}{% url 'admin_panel:bp_credit_ledger' target_bp.pk %}{% else %}{% url 'admin_panel:credit_list' %}{% endif %}" class="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-navy-700 text-xs font-semibold transition-all shadow-sm">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/20 flex items-center gap-2 transition-all transform active:scale-95">
+                    <iconify-icon icon="{% if is_edit %}lucide:check-circle{% else %}lucide:plus-circle{% endif %}" class="text-sm"></iconify-icon>
+                    <span>{% if is_edit %}Save Changes{% else %}Record Credit Adjustment{% endif %}</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

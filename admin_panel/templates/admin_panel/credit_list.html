@@ -1,0 +1,311 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Manage Credits — Allocations &amp; Ledger — Leads Management CRM{% endblock %}
+
+{% block header_left %}
+<div class="flex items-center gap-3">
+    <a href="{% url 'admin_panel:dashboard' %}" class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-border flex items-center justify-center text-slate-500 dark:text-navy-muted hover:text-slate-900 dark:hover:text-white hover:border-cyan-500 transition-all shadow-sm group" title="Return to Dashboard">
+        <iconify-icon icon="lucide:arrow-left" class="text-sm group-hover:-translate-x-0.5 transition-transform"></iconify-icon>
+    </a>
+    <div>
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-500 dark:text-navy-muted">Admin Panel</span>
+            <span class="text-xs text-slate-400 dark:text-navy-muted">/</span>
+            <h1 class="font-display text-sm font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                <span>Manage Business Partner Credits</span>
+                <span class="px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-cyan-500/15 text-cyan-600 dark:text-navy-cyan border border-cyan-500/30">
+                    SUPER ADMIN ONLY
+                </span>
+            </h1>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block header_right %}
+<div class="flex items-center gap-3">
+    <button type="button" onclick="toggleTheme()" 
+        class="p-2 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800/80 hover:bg-slate-200 dark:hover:bg-navy-800 text-slate-600 dark:text-navy-cyan transition-all shadow-sm flex items-center justify-center group active:scale-95" 
+        title="Toggle Light / Dark theme">
+        <iconify-icon icon="lucide:sun" class="text-base hidden dark:inline text-amber-400 group-hover:rotate-45 transition-transform duration-300"></iconify-icon>
+        <iconify-icon icon="lucide:moon" class="text-base inline dark:hidden text-indigo-600 group-hover:-rotate-12 transition-transform duration-300"></iconify-icon>
+    </button>
+
+    <a href="{% url 'admin_panel:credit_create' %}" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-cyan-500/20 flex items-center gap-2 transition-all transform active:scale-95">
+        <iconify-icon icon="lucide:plus-circle" class="text-sm"></iconify-icon>
+        <span>Add Credit Transaction</span>
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- KPI Metric Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- 1. Total Net Credits -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-cyan-500/40 transition-all flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Net Ledger Credits</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Total Net Balance Allocated</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-navy-cyan">
+                    <iconify-icon icon="lucide:wallet" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-cyan-600 dark:text-navy-cyan tracking-tight">
+                    {{ net_credits|intcomma }}
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 text-[11px] text-slate-500 dark:text-navy-muted flex justify-between">
+                    <span>Active Pool</span>
+                    <span class="font-mono font-medium text-slate-700 dark:text-slate-300">All Partners</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Total Inflow / Top-ups -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-emerald-500/40 transition-all flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Total Allocated</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Allocations, Top-ups &amp; Bonuses</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                    <iconify-icon icon="lucide:trending-up" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
+                    +{{ total_allocated|intcomma }}
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 text-[11px] text-slate-500 dark:text-navy-muted flex justify-between">
+                    <span>Inflow Sum</span>
+                    <span class="font-mono font-medium text-emerald-600 dark:text-emerald-400">Positive Credits</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Total Deductions -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-rose-500/40 transition-all flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Total Deductions</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Corrections &amp; Penalty Deductions</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-600 dark:text-rose-400">
+                    <iconify-icon icon="lucide:trending-down" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-rose-600 dark:text-rose-400 tracking-tight">
+                    -{{ total_deducted|intcomma }}
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 text-[11px] text-slate-500 dark:text-navy-muted flex justify-between">
+                    <span>Outflow Sum</span>
+                    <span class="font-mono font-medium text-rose-600 dark:text-rose-400">Corrections</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Partners Count -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm hover:border-indigo-500/40 transition-all flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Partners Covered</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Accounts with Ledger History</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                    <iconify-icon icon="lucide:users" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-indigo-600 dark:text-indigo-400 tracking-tight">
+                    {{ active_bps_with_credits }} <span class="text-xs font-sans text-slate-400 dark:text-navy-muted">/ {{ all_bps|length }} BPs</span>
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 text-[11px] text-slate-500 dark:text-navy-muted flex justify-between">
+                    <span>Coverage Rate</span>
+                    <span class="font-mono font-medium text-slate-700 dark:text-slate-300">Active Partners</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm">
+        <form method="get" action="{% url 'admin_panel:credit_list' %}" class="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <!-- BP Select -->
+                <div class="w-full sm:w-60">
+                    <select name="bp" onchange="this.form.submit()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-cyan-500">
+                        <option value="">-- All Business Partners --</option>
+                        {% for bp in all_bps %}
+                        <option value="{{ bp.pk }}" {% if selected_bp and selected_bp.pk == bp.pk %}selected{% endif %}>
+                            {{ bp.company_name }} (@{{ bp.user.username }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Type Select -->
+                <div class="w-full sm:w-44">
+                    <select name="type" onchange="this.form.submit()" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-cyan-500">
+                        <option value="">-- All Types --</option>
+                        <option value="ALLOCATION" {% if selected_type == 'ALLOCATION' %}selected{% endif %}>Allocation</option>
+                        <option value="TOP_UP" {% if selected_type == 'TOP_UP' %}selected{% endif %}>Top-Up</option>
+                        <option value="BONUS" {% if selected_type == 'BONUS' %}selected{% endif %}>Bonus</option>
+                        <option value="DEDUCTION" {% if selected_type == 'DEDUCTION' %}selected{% endif %}>Deduction</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Search Input -->
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <div class="relative w-full sm:w-64">
+                    <iconify-icon icon="lucide:search" class="absolute left-3 top-2.5 text-slate-400 dark:text-navy-muted text-sm"></iconify-icon>
+                    <input type="text" name="q" value="{{ q }}" placeholder="Search note, ref, partner..." class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 dark:border-navy-border bg-slate-50 dark:bg-navy-800 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-cyan-500">
+                </div>
+                <button type="submit" class="px-4 py-2 bg-slate-100 dark:bg-navy-800 hover:bg-slate-200 dark:hover:bg-navy-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-semibold transition-colors shadow-sm">
+                    Filter
+                </button>
+                {% if selected_bp or selected_type or q %}
+                <a href="{% url 'admin_panel:credit_list' %}" class="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold transition-colors" title="Clear Filters">
+                    <iconify-icon icon="lucide:x" class="text-sm"></iconify-icon>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Ledger Data Table -->
+    <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-navy-border/70 pb-4">
+            <div>
+                <h2 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <iconify-icon icon="lucide:receipt" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                    <span>Credit Transaction Ledger</span>
+                </h2>
+                <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">Comprehensive audit log of all manual and scheduled credit adjustments</p>
+            </div>
+            <span class="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-navy-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-navy-border">
+                {{ page_obj.paginator.count }} Total Records
+            </span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="border-b border-slate-100 dark:border-navy-border/70 bg-slate-50 dark:bg-[#121327] text-slate-500 dark:text-navy-muted uppercase font-mono text-[10px]">
+                        <th class="py-3 px-4">#ID</th>
+                        <th class="py-3 px-4">Date</th>
+                        <th class="py-3 px-4">Business Partner</th>
+                        <th class="py-3 px-4">Type</th>
+                        <th class="py-3 px-4">Amount</th>
+                        <th class="py-3 px-4">Description / Purpose</th>
+                        <th class="py-3 px-4">Reference ID</th>
+                        <th class="py-3 px-4">Logged By</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-navy-border/50 text-slate-700 dark:text-slate-300">
+                    {% for tx in transactions %}
+                    <tr class="hover:bg-slate-50/80 dark:hover:bg-navy-800/40 transition-colors">
+                        <td class="py-3.5 px-4 font-mono text-slate-400 dark:text-navy-muted">#{{ tx.pk }}</td>
+                        <td class="py-3.5 px-4 font-bold text-slate-900 dark:text-white whitespace-nowrap">{{ tx.transaction_date|date:"M d, Y" }}</td>
+                        <td class="py-3.5 px-4">
+                            <a href="{% url 'admin_panel:bp_detail' tx.business_partner.pk %}" class="font-bold text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-navy-cyan flex items-center gap-1.5">
+                                <span>{{ tx.business_partner.company_name }}</span>
+                            </a>
+                            <span class="text-[11px] font-mono text-slate-400 dark:text-navy-muted">@{{ tx.business_partner.user.username }}</span>
+                        </td>
+                        <td class="py-3.5 px-4 whitespace-nowrap">
+                            {% if tx.transaction_type == 'ALLOCATION' %}
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-cyan-500/15 text-cyan-600 dark:text-navy-cyan border border-cyan-500/30">Allocation</span>
+                            {% elif tx.transaction_type == 'TOP_UP' %}
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">Top-Up</span>
+                            {% elif tx.transaction_type == 'BONUS' %}
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30">Bonus</span>
+                            {% else %}
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">Deduction</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 font-mono font-bold whitespace-nowrap">
+                            {% if tx.is_credit %}
+                            <span class="text-emerald-600 dark:text-emerald-400">+{{ tx.amount|intcomma }}</span>
+                            {% else %}
+                            <span class="text-rose-600 dark:text-rose-400">-{{ tx.amount|intcomma }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-600 dark:text-slate-300 max-w-xs truncate" title="{{ tx.description }}">
+                            {{ tx.description|default:"—" }}
+                        </td>
+                        <td class="py-3.5 px-4 font-mono text-[11px] text-slate-500 dark:text-navy-muted">
+                            {{ tx.reference_id|default:"—" }}
+                        </td>
+                        <td class="py-3.5 px-4 text-slate-500 dark:text-navy-muted text-[11px]">
+                            {% if tx.created_by %}@{{ tx.created_by.username }}{% else %}System{% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-1.5">
+                                <a href="{% url 'admin_panel:bp_credit_ledger' tx.business_partner.pk %}" class="p-1.5 rounded-lg text-slate-500 dark:text-navy-muted hover:text-cyan-600 dark:hover:text-navy-cyan hover:bg-slate-100 dark:hover:bg-navy-800 transition-colors" title="View Partner Ledger">
+                                    <iconify-icon icon="lucide:book-open" class="text-sm"></iconify-icon>
+                                </a>
+                                <a href="{% url 'admin_panel:credit_update' tx.pk %}" class="p-1.5 rounded-lg text-slate-500 dark:text-navy-muted hover:text-amber-500 hover:bg-amber-500/10 transition-colors" title="Edit Record">
+                                    <iconify-icon icon="lucide:edit-3" class="text-sm"></iconify-icon>
+                                </a>
+                                <form action="{% url 'admin_panel:credit_delete' tx.pk %}" method="post" class="inline" onsubmit="return confirm('Are you sure you want to void / delete this credit transaction of {{ tx.amount }} credits?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="p-1.5 rounded-lg text-slate-500 dark:text-navy-muted hover:text-rose-500 hover:bg-rose-500/10 transition-colors" title="Delete Transaction">
+                                        <iconify-icon icon="lucide:trash-2" class="text-sm"></iconify-icon>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="py-12 text-center text-slate-400 dark:text-navy-muted">
+                            <iconify-icon icon="lucide:wallet-cards" class="text-3xl mb-2"></iconify-icon>
+                            <p class="text-sm font-semibold">No credit transactions recorded yet</p>
+                            <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">Click "Add Credit Transaction" above to allocate credits or top up a partner account.</p>
+                            <div class="mt-4">
+                                <a href="{% url 'admin_panel:credit_create' %}" class="px-4 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-navy-cyan rounded-xl text-xs font-semibold transition-colors inline-flex items-center gap-1.5 border border-cyan-500/30">
+                                    <iconify-icon icon="lucide:plus" class="text-sm"></iconify-icon>
+                                    <span>Record First Transaction</span>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="flex items-center justify-between border-t border-slate-100 dark:border-navy-border/70 pt-4 text-xs">
+            <div class="text-slate-500 dark:text-navy-muted">
+                Showing Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </div>
+            <div class="flex items-center gap-1.5">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if selected_bp %}&bp={{ selected_bp.pk }}{% endif %}{% if selected_type %}&type={{ selected_type }}{% endif %}{% if q %}&q={{ q }}{% endif %}" class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-navy-border hover:bg-slate-100 dark:hover:bg-navy-800 text-slate-700 dark:text-slate-200 transition-colors">
+                    Previous
+                </a>
+                {% endif %}
+                <span class="px-3 py-1.5 font-mono text-cyan-600 dark:text-navy-cyan font-bold">{{ page_obj.number }}</span>
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if selected_bp %}&bp={{ selected_bp.pk }}{% endif %}{% if selected_type %}&type={{ selected_type }}{% endif %}{% if q %}&q={{ q }}{% endif %}" class="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-navy-border hover:bg-slate-100 dark:hover:bg-navy-800 text-slate-700 dark:text-slate-200 transition-colors">
+                    Next
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+{% endblock %}

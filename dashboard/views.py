@@ -60,8 +60,12 @@ def bp_dashboard(request):
             
     recent_snapshots = CreditSnapshot.objects.filter(business_partner=bp).order_by('-snapshot_date')[:30]
     
-    remaining = max(0, character_limit - character_count)
-    usage_percentage = round((character_count / character_limit * 100), 1) if character_limit else 0.0
+    # Factor in ledger credits (allocations, top-ups, bonuses, deductions)
+    ledger_credits = bp.get_ledger_credits()
+    effective_character_limit = character_limit + ledger_credits if ledger_credits else character_limit
+
+    remaining = max(0, effective_character_limit - character_count)
+    usage_percentage = round((character_count / effective_character_limit * 100), 1) if effective_character_limit else 0.0
     remaining_percentage = round(max(0.0, 100.0 - usage_percentage), 1)
     
     alert_status = (remaining <= bp.credit_alert_threshold) if bp.credit_alert_threshold > 100 else (remaining_percentage <= bp.credit_alert_threshold)
@@ -94,7 +98,7 @@ def bp_dashboard(request):
     usage_chart_data = {
         'labels': chart_labels,
         'values': chart_data,
-        'limit': [character_limit] * len(chart_labels),
+        'limit': [effective_character_limit] * len(chart_labels),
     }
     
     context.update({
@@ -102,7 +106,9 @@ def bp_dashboard(request):
         'voices': voices,
         'recent_snapshots': recent_snapshots,
         'usage_chart_data': usage_chart_data,
-        'character_limit': character_limit,
+        'character_limit': effective_character_limit,
+        'base_character_limit': character_limit,
+        'ledger_credits': ledger_credits,
         'character_count': character_count,
         'remaining': remaining,
         'usage_percentage': usage_percentage,

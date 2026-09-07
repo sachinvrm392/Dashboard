@@ -339,3 +339,31 @@ class BPResetPasswordForm(forms.Form):
         user.save()
         return user
 
+
+from dashboard.models import CreditTransaction
+
+class CreditTransactionForm(forms.ModelForm):
+    class Meta:
+        model = CreditTransaction
+        fields = [
+            'business_partner', 'transaction_type', 'amount',
+            'description', 'reference_id', 'transaction_date'
+        ]
+        widgets = {
+            'transaction_date': forms.DateInput(attrs={'type': 'date'}),
+            'description': forms.TextInput(attrs={'placeholder': 'e.g. Q3 Promotional Top-Up, Contract Allocation'}),
+            'reference_id': forms.TextInput(attrs={'placeholder': 'e.g. INV-2026-001, PO-882'}),
+            'amount': forms.NumberInput(attrs={'placeholder': 'e.g. 10000', 'min': 1}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['business_partner'].queryset = BusinessPartner.objects.filter(is_deleted=False).order_by('company_name')
+        self.fields['business_partner'].label_from_instance = lambda bp: f"{bp.company_name} (@{bp.user.username})"
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get('amount')
+        if not amount or amount <= 0:
+            raise forms.ValidationError("Amount must be a positive number of credits.")
+        return amount
+

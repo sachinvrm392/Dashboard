@@ -5,7 +5,7 @@ from django.db import transaction
 from accounts.models import BusinessPartner, User
 from accounts.decorators import super_admin_required
 from dashboard.services import ElevenLabsService
-from .forms import BPCreateForm, BPUpdateForm, UserProfileForm, BPResetPasswordForm
+from .forms import BPCreateForm, BPUpdateForm, UserProfileForm, BPResetPasswordForm, CreditTransactionForm
 from django.contrib.auth.decorators import login_required
 
 import json
@@ -13,7 +13,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Sum, Q
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from dashboard.models import CreditSnapshot
+from dashboard.models import CreditSnapshot, CreditTransaction
 
 @super_admin_required
 def admin_dashboard(request):
@@ -310,8 +310,12 @@ def bp_detail(request, pk):
                 }
             )
             
-    remaining = max(0, character_limit - character_count)
-    usage_percentage = round((character_count / character_limit * 100), 1) if character_limit else 0.0
+    # Factor in ledger credits (allocations, top-ups, bonuses, deductions)
+    ledger_credits = bp.get_ledger_credits()
+    effective_character_limit = character_limit + ledger_credits if ledger_credits else character_limit
+
+    remaining = max(0, effective_character_limit - character_count)
+    usage_percentage = round((character_count / effective_character_limit * 100), 1) if effective_character_limit else 0.0
     remaining_percentage = round(max(0.0, 100.0 - usage_percentage), 1)
     
     recent_snapshots = CreditSnapshot.objects.filter(business_partner=bp).order_by('-snapshot_date')[:30]
@@ -319,7 +323,9 @@ def bp_detail(request, pk):
     context = {
         'bp': bp,
         'credit_info': credit_info,
-        'character_limit': character_limit,
+        'character_limit': effective_character_limit,
+        'base_character_limit': character_limit,
+        'ledger_credits': ledger_credits,
         'character_count': character_count,
         'remaining': remaining,
         'usage_percentage': usage_percentage,
@@ -381,4 +387,171 @@ def bp_reset_password(request, pk=None):
         'total_bps': total_bps,
     }
     return render(request, 'admin_panel/bp_reset_password.html', context)
+
+
+@super_admin_required
+def credit_list(request):
+    """Master overview table of all credit transactions across all business partners."""
+    transactions = CreditTransaction.objects.select_related('business_partner', 'created_by').all()
+
+    # Filter by business partner
+    bp_id = request.GET.get('bp')
+    selected_bp = None
+    if bp_id:
+        transactions = transactions.filter(business_partner_id=bp_id)
+        selected_bp = BusinessPartner.objects.filter(pk=bp_id).first()
+
+    # Filter by transaction type
+    tx_type = request.GET.get('type')
+    if tx_type in dict(CreditTransaction.TransactionType.choices):
+        transactions = transactions.filter(transaction_type=tx_type)
+
+    # Search by keyword
+    q = request.GET.get('q', '').strip()
+    if q:
+        transactions = transactions.filter(
+            Q(description__icontains=q) |
+            Q(reference_id__icontains=q) |
+            Q(business_partner__company_name__icontains=q)
+        )
+
+    # Summary metrics across all transactions
+    all_txs = CreditTransaction.objects.all()
+    total_allocated = sum(t.amount for t in all_txs if t.is_credit)
+    total_deducted = sum(t.amount for t in all_txs if not t.is_credit)
+    net_credits = total_allocated - total_deducted
+    active_bps_with_credits = BusinessPartner.objects.filter(credit_transactions__isnull=False, is_deleted=False).distinct().count()
+
+    # Pagination
+    paginator = Paginator(transactions, 20)
+    page_number = request.GET.get('page')
+    try:
+        page_obj = paginator.get_page(page_number)
+    except (PageNotAnInteger, EmptyPage):
+        page_obj = paginator.get_page(1)
+
+    all_bps = BusinessPartner.objects.filter(is_deleted=False).order_by('company_name')
+
+    context = {
+        'page_obj': page_obj,
+        'transactions': page_obj.object_list,
+        'all_bps': all_bps,
+        'selected_bp': selected_bp,
+        'selected_type': tx_type,
+        'q': q,
+        'total_allocated': total_allocated,
+        'total_deducted': total_deducted,
+        'net_credits': net_credits,
+        'active_bps_with_credits': active_bps_with_credits,
+        'active_nav': 'credits',
+    }
+    return render(request, 'admin_panel/credit_list.html', context)
+
+
+@super_admin_required
+def bp_credit_ledger(request, bp_id):
+    """Specific credit ledger for an individual business partner."""
+    bp = get_object_or_404(BusinessPartner, pk=bp_id)
+    transactions = bp.credit_transactions.select_related('created_by').all()
+
+    total_allocated = sum(t.amount for t in transactions if t.is_credit)
+    total_deducted = sum(t.amount for t in transactions if not t.is_credit)
+    net_ledger = total_allocated - total_deducted
+
+    context = {
+        'bp': bp,
+        'transactions': transactions,
+        'total_allocated': total_allocated,
+        'total_deducted': total_deducted,
+        'net_ledger': net_ledger,
+        'active_nav': 'credits',
+    }
+    return render(request, 'admin_panel/bp_credit_ledger.html', context)
+
+
+@super_admin_required
+def credit_create(request):
+    """Create a new credit transaction (allocation, top-up, bonus, deduction)."""
+    bp_id = request.GET.get('bp')
+    initial = {}
+    if bp_id:
+        bp = BusinessPartner.objects.filter(pk=bp_id, is_deleted=False).first()
+        if bp:
+            initial['business_partner'] = bp
+
+    if request.method == 'POST':
+        form = CreditTransactionForm(request.POST)
+        if form.is_valid():
+            tx = form.save(commit=False)
+            tx.created_by = request.user
+            tx.save()
+            messages.success(
+                request,
+                f"Successfully recorded {tx.get_transaction_type_display()} of {tx.amount:,} credits for {tx.business_partner.company_name}."
+            )
+            next_url = request.POST.get('next')
+            if next_url:
+                return redirect(next_url)
+            return redirect('admin_panel:bp_credit_ledger', bp_id=tx.business_partner.pk)
+    else:
+        form = CreditTransactionForm(initial=initial)
+
+    target_bp_id = bp_id or request.POST.get('business_partner')
+    target_bp = BusinessPartner.objects.filter(pk=target_bp_id).first() if target_bp_id else None
+
+    context = {
+        'form': form,
+        'target_bp': target_bp,
+        'is_edit': False,
+        'active_nav': 'credits',
+    }
+    return render(request, 'admin_panel/credit_form.html', context)
+
+
+@super_admin_required
+def credit_update(request, pk):
+    """Update an existing credit transaction."""
+    tx = get_object_or_404(CreditTransaction, pk=pk)
+
+    if request.method == 'POST':
+        form = CreditTransactionForm(request.POST, instance=tx)
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                f"Updated transaction #{tx.pk} for {tx.business_partner.company_name}."
+            )
+            next_url = request.POST.get('next')
+            if next_url:
+                return redirect(next_url)
+            return redirect('admin_panel:bp_credit_ledger', bp_id=tx.business_partner.pk)
+    else:
+        form = CreditTransactionForm(instance=tx)
+
+    context = {
+        'form': form,
+        'transaction': tx,
+        'target_bp': tx.business_partner,
+        'is_edit': True,
+        'active_nav': 'credits',
+    }
+    return render(request, 'admin_panel/credit_form.html', context)
+
+
+@require_POST
+@super_admin_required
+def credit_delete(request, pk):
+    """Delete/void an existing credit transaction."""
+    tx = get_object_or_404(CreditTransaction, pk=pk)
+    bp = tx.business_partner
+    amount = tx.amount
+    tx_type = tx.get_transaction_type_display()
+    tx.delete()
+
+    messages.success(
+        request,
+        f"Voided/Deleted {tx_type} of {amount:,} credits for {bp.company_name}."
+    )
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'admin_panel:credit_list'
+    return redirect(next_url)
 
