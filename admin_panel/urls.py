@@ -22,4 +22,6 @@ urlpatterns = [
     path('credits/<int:pk>/edit/', views.credit_update, name='credit_update'),
     path('credits/<int:pk>/delete/', views.credit_delete, name='credit_delete'),
     path('bp/<int:bp_id>/credits/', views.bp_credit_ledger, name='bp_credit_ledger'),
+    path('conversations/', views.admin_conversations, name='conversations'),
+    path('conversations/sync/', views.admin_sync_conversations_api, name='conversations_sync'),
 ]

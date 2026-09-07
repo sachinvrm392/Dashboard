@@ -1,12 +1,15 @@
 import json
 import hashlib
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.core.cache import cache
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q, Sum
+from django.contrib.auth.decorators import login_required
 from accounts.decorators import business_partner_required
-from .models import CreditSnapshot
+from .models import CreditSnapshot, CallConversation
 from .services import ElevenLabsService
 from .notifications import check_and_send_credit_alert
 
@@ -185,4 +188,112 @@ def copilot_view(request):
     Renders the Sainou AI Recruiter Co-Pilot command center GUI.
     """
     return render(request, 'copilot.html')
+
+
+def format_total_duration(total_secs):
+    if not total_secs:
+        return "0s"
+    hours = total_secs // 3600
+    minutes = (total_secs % 3600) // 60
+    secs = total_secs % 60
+    parts = []
+    if hours > 0:
+        parts.append(f"{hours}h")
+    if minutes > 0:
+        parts.append(f"{minutes}m")
+    if secs > 0 or not parts:
+        parts.append(f"{secs}s")
+    return " ".join(parts)
+
+
+@business_partner_required
+def bp_conversations(request):
+    bp = request.user.business_partner
+    qs = CallConversation.objects.filter(business_partner=bp).order_by('-call_timestamp')
+
+    # Search query
+    q = request.GET.get('q', '').strip()
+    if q:
+        qs = qs.filter(
+            Q(conversation_id__icontains=q) |
+            Q(agent_id__icontains=q) |
+            Q(caller_number__icontains=q) |
+            Q(called_number__icontains=q) |
+            Q(call_sid__icontains=q) |
+            Q(caller_name__icontains=q)
+        )
+
+    # Evaluation filter
+    eval_filter = request.GET.get('evaluation', '').strip()
+    if eval_filter:
+        qs = qs.filter(evaluation__iexact=eval_filter)
+
+    # KPI summary metrics
+    total_calls = qs.count()
+    aggregates = qs.aggregate(
+        total_duration=Sum('duration'),
+        total_cost=Sum('conversation_cost'),
+        total_llm=Sum('credits_llm')
+    )
+    total_duration_secs = aggregates['total_duration'] or 0
+    total_cost = aggregates['total_cost'] or 0.0
+    total_llm = aggregates['total_llm'] or 0.0
+
+    # Pagination: 15 per page
+    paginator = Paginator(qs, 15)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    context = {
+        'bp': bp,
+        'page_obj': page_obj,
+        'total_calls': total_calls,
+        'total_duration_formatted': format_total_duration(total_duration_secs),
+        'total_cost': total_cost,
+        'total_llm': total_llm,
+        'q': q,
+        'eval_filter': eval_filter,
+        'active_nav': 'conversations',
+    }
+    return render(request, 'dashboard/conversations.html', context)
+
+
+@require_POST
+@business_partner_required
+def sync_conversations_api(request):
+    try:
+        bp = request.user.business_partner
+        res = ElevenLabsService.sync_conversations(bp)
+        return JsonResponse(res)
+    except Exception as e:
+        return JsonResponse({'error': True, 'message': str(e)}, status=500)
+
+
+@login_required
+def conversation_transcript_api(request, pk):
+    try:
+        conv = get_object_or_404(CallConversation, pk=pk)
+        # Security check: User must be super admin or the partner who owns this conversation
+        if not request.user.is_super_admin():
+            if not hasattr(request.user, 'business_partner') or request.user.business_partner != conv.business_partner:
+                return JsonResponse({'error': True, 'message': 'Permission denied.'}, status=403)
+
+        return JsonResponse({
+            'success': True,
+            'conversation_id': conv.conversation_id,
+            'agent_id': conv.agent_id,
+            'caller_name': conv.caller_name or 'Anonymous Caller',
+            'duration': conv.duration_formatted,
+            'call_timestamp': conv.call_timestamp.strftime('%b %d, %Y %H:%M:%S UTC'),
+            'evaluation': conv.evaluation,
+            'messages': conv.messages,
+        })
+    except Exception as e:
+        return JsonResponse({'error': True, 'message': str(e)}, status=500)
+
 

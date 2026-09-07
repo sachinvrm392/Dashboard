@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.db import transaction
@@ -13,7 +14,7 @@ from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Sum, Q
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from dashboard.models import CreditSnapshot, CreditTransaction
+from dashboard.models import CreditSnapshot, CreditTransaction, CallConversation
 
 @super_admin_required
 def admin_dashboard(request):
@@ -605,4 +606,116 @@ def credit_delete(request, pk):
     )
     next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or 'admin_panel:credit_list'
     return redirect(next_url)
+
+
+@super_admin_required
+def admin_conversations(request):
+    """
+    Super Admin view of all call conversations across all Business Partners with BP filter.
+    """
+    bps = BusinessPartner.objects.filter(is_deleted=False).order_by('company_name')
+    bp_id = request.GET.get('bp', '').strip()
+
+    qs = CallConversation.objects.all().select_related('business_partner').order_by('-call_timestamp')
+    selected_bp = None
+    if bp_id:
+        try:
+            selected_bp = BusinessPartner.objects.get(pk=bp_id)
+            qs = qs.filter(business_partner=selected_bp)
+        except BusinessPartner.DoesNotExist:
+            selected_bp = None
+
+    # Search query
+    q = request.GET.get('q', '').strip()
+    if q:
+        qs = qs.filter(
+            Q(conversation_id__icontains=q) |
+            Q(agent_id__icontains=q) |
+            Q(caller_number__icontains=q) |
+            Q(called_number__icontains=q) |
+            Q(call_sid__icontains=q) |
+            Q(caller_name__icontains=q) |
+            Q(business_partner__company_name__icontains=q)
+        )
+
+    # Evaluation filter
+    eval_filter = request.GET.get('evaluation', '').strip()
+    if eval_filter:
+        qs = qs.filter(evaluation__iexact=eval_filter)
+
+    # Summary metrics
+    total_calls = qs.count()
+    aggregates = qs.aggregate(
+        total_duration=Sum('duration'),
+        total_cost=Sum('conversation_cost'),
+        total_llm=Sum('credits_llm')
+    )
+    total_duration_secs = aggregates['total_duration'] or 0
+    total_cost = aggregates['total_cost'] or 0.0
+    total_llm = aggregates['total_llm'] or 0.0
+
+    from dashboard.views import format_total_duration
+
+    # Pagination: 15 per page
+    paginator = Paginator(qs, 15)
+    page_number = request.GET.get('page', 1)
+    try:
+        page_obj = paginator.page(page_number)
+    except PageNotAnInteger:
+        page_obj = paginator.page(1)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    context = {
+        'bps': bps,
+        'selected_bp': selected_bp,
+        'selected_bp_id': bp_id,
+        'page_obj': page_obj,
+        'total_calls': total_calls,
+        'total_duration_formatted': format_total_duration(total_duration_secs),
+        'total_cost': total_cost,
+        'total_llm': total_llm,
+        'q': q,
+        'eval_filter': eval_filter,
+        'is_admin_view': True,
+        'active_nav': 'conversations',
+    }
+    return render(request, 'dashboard/conversations.html', context)
+
+
+@require_POST
+@super_admin_required
+def admin_sync_conversations_api(request):
+    """
+    Super Admin endpoint to trigger sync for a selected partner or all partners with API keys.
+    """
+    bp_id = request.POST.get('bp', '').strip()
+    if bp_id:
+        bp = get_object_or_404(BusinessPartner, pk=bp_id)
+        res = ElevenLabsService.sync_conversations(bp)
+        return JsonResponse(res)
+
+    # Sync all active partners with API key
+    active_bps = BusinessPartner.objects.filter(is_active=True, is_deleted=False).exclude(elevenlabs_api_key='')
+    if not active_bps.exists():
+        return JsonResponse({'error': True, 'message': 'No active Business Partners have an ElevenLabs API key configured.'}, status=400)
+
+    total_synced = 0
+    total_created = 0
+    total_updated = 0
+    for partner in active_bps:
+        res = ElevenLabsService.sync_conversations(partner)
+        if res.get('success'):
+            total_synced += res.get('synced_count', 0)
+            total_created += res.get('created_count', 0)
+            total_updated += res.get('updated_count', 0)
+
+    return JsonResponse({
+        'success': True,
+        'synced_count': total_synced,
+        'created_count': total_created,
+        'updated_count': total_updated,
+        'message': f"Synchronized {len(active_bps)} partner(s): {total_synced} calls processed ({total_created} new, {total_updated} updated)."
+    })
+
 

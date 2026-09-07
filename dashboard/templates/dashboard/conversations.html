@@ -1,0 +1,576 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Call Conversations | ElevenLabs CRM{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top Action Bar & Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-navy-border pb-5">
+        <div>
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-navy-cyan">
+                    <iconify-icon icon="lucide:phone-call" class="text-xl"></iconify-icon>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold font-display text-slate-900 dark:text-white tracking-tight">
+                        Call Conversations
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-navy-muted mt-0.5">
+                        Historical call records, conversational telemetry, and LLM credit usage from ElevenLabs
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+            {% if is_admin_view and bps %}
+            <!-- Super Admin BP Dropdown Filter -->
+            <form method="get" class="inline-flex items-center gap-2">
+                {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+                {% if eval_filter %}<input type="hidden" name="evaluation" value="{{ eval_filter }}">{% endif %}
+                <select name="bp" onchange="this.form.submit()" class="px-3 py-2 rounded-xl text-xs font-semibold bg-white dark:bg-[#161730] border border-slate-200 dark:border-navy-border text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500 shadow-sm cursor-pointer">
+                    <option value="">All Business Partners ({{ bps.count }})</option>
+                    {% for b in bps %}
+                    <option value="{{ b.id }}" {% if selected_bp_id == b.id|stringformat:"s" %}selected{% endif %}>
+                        {{ b.company_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% endif %}
+
+            <!-- Sync Conversations Button -->
+            <button id="syncConversationsBtn" type="button" 
+                class="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-600 dark:bg-cyan-500 dark:hover:bg-cyan-400 text-white dark:text-navy-950 text-xs font-bold transition-all shadow-md shadow-cyan-500/20 flex items-center gap-2">
+                <iconify-icon id="syncIcon" icon="lucide:refresh-cw" class="text-sm"></iconify-icon>
+                <span id="syncText">Sync Conversations</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 4 KPI Summary Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Total Calls Card -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Total Conversations</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Recorded Database Calls</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-navy-cyan">
+                    <iconify-icon icon="lucide:phone-incoming" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-cyan-600 dark:text-navy-cyan tracking-tight">
+                    {{ total_calls|intcomma }}
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
+                    <span>Active Records</span>
+                    <span class="font-mono font-medium text-emerald-500">Live DB</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Talk Time Card -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Total Duration</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Accumulated Talk Time</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                    <iconify-icon icon="lucide:timer" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-indigo-600 dark:text-indigo-400 tracking-tight">
+                    {{ total_duration_formatted }}
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
+                    <span>Call Connection</span>
+                    <span class="font-mono font-medium text-indigo-500">Voice Synthesis</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Conversation Cost Card -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Total Cost</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Gross ElevenLabs Credits</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                    <iconify-icon icon="lucide:coins" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-amber-500 dark:text-amber-400 tracking-tight">
+                    {{ total_cost|floatformat:0|intcomma }}
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
+                    <span>Category</span>
+                    <span class="font-mono font-medium text-amber-500">Voice &amp; Platform</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total LLM Credits Card -->
+        <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <div>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Credits (LLM)</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">AI Model Generation</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                    <iconify-icon icon="lucide:sparkles" class="text-lg"></iconify-icon>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-2xl sm:text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
+                    {{ total_llm|floatformat:0|intcomma }}
+                </div>
+                <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
+                    <span>Inference Tokens</span>
+                    <span class="font-mono font-medium text-emerald-500">LLM Charge</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="p-4 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm">
+        <form method="get" class="flex flex-col md:flex-row items-center justify-between gap-3">
+            {% if is_admin_view and selected_bp_id %}
+            <input type="hidden" name="bp" value="{{ selected_bp_id }}">
+            {% endif %}
+
+            <!-- Keyword Search -->
+            <div class="relative w-full md:w-96">
+                <iconify-icon icon="lucide:search" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-navy-muted text-base"></iconify-icon>
+                <input type="text" name="q" value="{{ q }}" placeholder="Search ID, Caller/Called #, SID, Agent, Name..."
+                    class="w-full pl-10 pr-4 py-2 rounded-xl text-xs bg-slate-50 dark:bg-navy-800 border border-slate-200 dark:border-navy-border text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-navy-muted focus:outline-none focus:ring-1 focus:ring-cyan-500">
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                <!-- Evaluation Filter -->
+                <select name="evaluation" class="px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-navy-800 border border-slate-200 dark:border-navy-border text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-cyan-500">
+                    <option value="">All Evaluations</option>
+                    <option value="success" {% if eval_filter == 'success' %}selected{% endif %}>Success</option>
+                    <option value="failure" {% if eval_filter == 'failure' %}selected{% endif %}>Failure</option>
+                    <option value="done" {% if eval_filter == 'done' %}selected{% endif %}>Done / Other</option>
+                </select>
+
+                <button type="submit" class="px-4 py-2 rounded-xl bg-slate-900 dark:bg-navy-700 hover:bg-slate-800 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+                    <iconify-icon icon="lucide:filter" class="text-xs"></iconify-icon>
+                    <span>Filter</span>
+                </button>
+
+                {% if q or eval_filter or selected_bp_id %}
+                <a href="{% if is_admin_view %}{% url 'admin_panel:conversations' %}{% else %}{% url 'dashboard:conversations' %}{% endif %}"
+                    class="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-navy-border bg-slate-100 dark:bg-navy-800 hover:bg-slate-200 dark:hover:bg-navy-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors">
+                    Reset
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Call Conversations Data Table -->
+    <div class="p-6 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm space-y-4">
+        
+        <div class="flex items-center justify-between border-b border-slate-100 dark:border-navy-border/70 pb-4">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                <iconify-icon icon="lucide:list" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                <span>Call Logs &amp; Telemetry</span>
+            </h3>
+            <span class="text-xs font-mono text-slate-500 dark:text-navy-muted">
+                Showing {{ page_obj.start_index|default:"0" }}–{{ page_obj.end_index|default:"0" }} of {{ total_calls }} records
+            </span>
+        </div>
+
+        {% if page_obj %}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-slate-50 dark:bg-navy-900 text-slate-400 dark:text-navy-muted text-[11px] uppercase tracking-wider font-semibold border-b border-slate-200 dark:border-navy-border">
+                    <tr>
+                        <th class="py-3 px-3">#</th>
+                        <th class="py-3 px-3">Conversation ID</th>
+                        {% if is_admin_view %}<th class="py-3 px-3">Partner</th>{% endif %}
+                        <th class="py-3 px-3">Call Timestamp</th>
+                        <th class="py-3 px-3">Agent ID</th>
+                        <th class="py-3 px-3 text-center">Evaluation</th>
+                        <th class="py-3 px-3 text-right">Duration</th>
+                        <th class="py-3 px-3 text-center">Messages</th>
+                        <th class="py-3 px-3 text-right">Cost</th>
+                        <th class="py-3 px-3 text-right">Credits (LLM)</th>
+                        <th class="py-3 px-3">Caller / Called</th>
+                        <th class="py-3 px-3">Call SID</th>
+                        <th class="py-3 px-3">Caller Name</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-navy-border/40 font-mono">
+                    {% for conv in page_obj %}
+                    <tr class="hover:bg-slate-50 dark:hover:bg-navy-800/50 transition-colors">
+                        <!-- Primary Key ID -->
+                        <td class="py-3 px-3 font-semibold text-slate-400">
+                            {{ conv.id }}
+                        </td>
+
+                        <!-- Conversation ID -->
+                        <td class="py-3 px-3 font-semibold text-slate-900 dark:text-slate-100">
+                            <span class="inline-block px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-navy-800 border border-slate-200 dark:border-navy-border text-[11px] text-cyan-600 dark:text-navy-cyan font-mono" title="{{ conv.conversation_id }}">
+                                {{ conv.conversation_id|truncatechars:18 }}
+                            </span>
+                        </td>
+
+                        {% if is_admin_view %}
+                        <!-- Business Partner -->
+                        <td class="py-3 px-3 font-sans font-medium text-slate-800 dark:text-slate-200">
+                            <a href="{% url 'admin_panel:bp_detail' conv.business_partner.pk %}" class="hover:text-cyan-600 dark:hover:text-navy-cyan hover:underline">
+                                {{ conv.business_partner.company_name }}
+                            </a>
+                        </td>
+                        {% endif %}
+
+                        <!-- Call Timestamp -->
+                        <td class="py-3 px-3 text-slate-600 dark:text-slate-300 font-sans text-[11px] whitespace-nowrap">
+                            {{ conv.call_timestamp|date:"M d, Y" }}
+                            <span class="text-slate-400 dark:text-navy-muted block text-[10px] font-mono">{{ conv.call_timestamp|date:"H:i:s e" }}</span>
+                        </td>
+
+                        <!-- Agent ID -->
+                        <td class="py-3 px-3 text-slate-600 dark:text-slate-300 text-[11px]" title="{{ conv.agent_id }}">
+                            {{ conv.agent_id|default:"-"|truncatechars:14 }}
+                        </td>
+
+                        <!-- Evaluation -->
+                        <td class="py-3 px-3 text-center">
+                            {% if conv.evaluation|lower == 'success' %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                Success
+                            </span>
+                            {% elif conv.evaluation|lower == 'failure' %}
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                                Failure
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-navy-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-navy-border">
+                                {{ conv.evaluation|default:"Done"|title }}
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Duration -->
+                        <td class="py-3 px-3 text-right font-semibold text-slate-800 dark:text-slate-200">
+                            {{ conv.duration_formatted }}
+                        </td>
+
+                        <!-- Messages (View Transcript Action) -->
+                        <td class="py-3 px-3 text-center font-sans">
+                            <button type="button" onclick="openTranscriptModal({{ conv.pk }})"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-700 dark:text-navy-cyan border border-cyan-500/30 text-[11px] font-semibold transition-colors shadow-sm">
+                                <iconify-icon icon="lucide:message-square" class="text-xs"></iconify-icon>
+                                <span>{{ conv.message_count }} msgs</span>
+                            </button>
+                        </td>
+
+                        <!-- Conversation Cost -->
+                        <td class="py-3 px-3 text-right font-semibold text-amber-600 dark:text-amber-400">
+                            {{ conv.conversation_cost|floatformat:0|intcomma }}
+                        </td>
+
+                        <!-- Credits (LLM) -->
+                        <td class="py-3 px-3 text-right font-semibold text-emerald-600 dark:text-emerald-400">
+                            {{ conv.credits_llm|floatformat:0|intcomma }}
+                        </td>
+
+                        <!-- Caller / Called Numbers -->
+                        <td class="py-3 px-3 text-slate-600 dark:text-slate-300 text-[11px] font-sans">
+                            {% if conv.caller_number or conv.called_number %}
+                            <div>From: <strong class="font-mono text-slate-800 dark:text-slate-200">{{ conv.caller_number|default:"-" }}</strong></div>
+                            <div class="text-[10px] text-slate-400">To: {{ conv.called_number|default:"-" }}</div>
+                            {% else %}
+                            <span class="text-slate-400">Web / Agent</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Call SID -->
+                        <td class="py-3 px-3 text-slate-500 dark:text-navy-muted text-[11px]" title="{{ conv.call_sid }}">
+                            {{ conv.call_sid|default:"-"|truncatechars:12 }}
+                        </td>
+
+                        <!-- Caller Name -->
+                        <td class="py-3 px-3 text-slate-700 dark:text-slate-200 font-sans text-xs">
+                            {{ conv.caller_name|default:"-" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if page_obj.has_other_pages %}
+        <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-navy-border/60 text-xs">
+            <div>
+                <span class="text-slate-500 dark:text-navy-muted">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+            </div>
+            <div class="flex items-center gap-1.5">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if eval_filter %}&evaluation={{ eval_filter }}{% endif %}{% if selected_bp_id %}&bp={{ selected_bp_id }}{% endif %}"
+                    class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-navy-border bg-white dark:bg-navy-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-navy-700 font-medium transition-colors">
+                    Previous
+                </a>
+                {% endif %}
+
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if eval_filter %}&evaluation={{ eval_filter }}{% endif %}{% if selected_bp_id %}&bp={{ selected_bp_id }}{% endif %}"
+                    class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-navy-border bg-white dark:bg-navy-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-navy-700 font-medium transition-colors">
+                    Next
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-16 space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-600 dark:text-navy-cyan flex items-center justify-center mx-auto text-2xl border border-cyan-500/20">
+                <iconify-icon icon="lucide:phone-off"></iconify-icon>
+            </div>
+            <h4 class="text-sm font-bold text-slate-800 dark:text-white">No Call Conversations Found</h4>
+            <p class="text-xs text-slate-500 dark:text-navy-muted max-w-sm mx-auto">
+                {% if q or eval_filter %}
+                No calls match your active search filters. Try adjusting your terms or resetting.
+                {% else %}
+                No conversation history has been recorded yet. Click <strong>Sync Conversations</strong> above to fetch the latest call logs from ElevenLabs.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+
+<!-- Transcript Dialogue Modal -->
+<div id="transcriptModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden p-4">
+    <div class="bg-white dark:bg-[#161730] border border-slate-200 dark:border-navy-border rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[85vh] overflow-hidden animate-fadeIn">
+        
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b border-slate-100 dark:border-navy-border flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-navy-cyan">
+                    <iconify-icon icon="lucide:messages-square" class="text-lg"></iconify-icon>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>Conversation Transcript</span>
+                        <span id="modalEvalBadge" class="text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">Success</span>
+                    </h3>
+                    <p id="modalConvSub" class="text-[11px] font-mono text-slate-500 dark:text-navy-muted">
+                        conv_id &bull; 0m 0s
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="closeTranscriptModal()" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-navy-800 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                <iconify-icon icon="lucide:x" class="text-base"></iconify-icon>
+            </button>
+        </div>
+
+        <!-- Modal Transcript Chat Body -->
+        <div id="modalChatBody" class="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
+            <div class="text-center py-8 text-slate-400">Loading messages...</div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="px-6 py-3.5 bg-slate-50 dark:bg-navy-900/60 border-t border-slate-100 dark:border-navy-border flex items-center justify-between text-xs">
+            <span id="modalTime" class="text-[11px] text-slate-400 dark:text-navy-muted font-mono">Timestamp</span>
+            <button type="button" onclick="closeTranscriptModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-navy-800 hover:bg-slate-300 dark:hover:bg-navy-700 text-slate-700 dark:text-slate-200 font-semibold transition-colors">
+                Close
+            </button>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const syncBtn = document.getElementById('syncConversationsBtn');
+    const syncIcon = document.getElementById('syncIcon');
+    const syncText = document.getElementById('syncText');
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    if (syncBtn) {
+        syncBtn.addEventListener('click', function() {
+            syncBtn.disabled = true;
+            syncBtn.classList.add('opacity-75');
+            syncIcon.classList.add('animate-spin');
+            syncText.textContent = 'Syncing...';
+
+            const syncUrl = "{% if is_admin_view %}{% url 'admin_panel:conversations_sync' %}{% else %}{% url 'dashboard:conversations_sync' %}{% endif %}";
+            const formData = new FormData();
+            {% if is_admin_view and selected_bp_id %}
+            formData.append('bp', '{{ selected_bp_id }}');
+            {% endif %}
+
+            fetch(syncUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    syncText.textContent = 'Synchronized!';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 600);
+                } else {
+                    alert('Sync Error: ' + (data.message || 'Failed to sync conversations with ElevenLabs.'));
+                    syncBtn.disabled = false;
+                    syncBtn.classList.remove('opacity-75');
+                    syncIcon.classList.remove('animate-spin');
+                    syncText.textContent = 'Sync Conversations';
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Connection error occurred while syncing.');
+                syncBtn.disabled = false;
+                syncBtn.classList.remove('opacity-75');
+                syncIcon.classList.remove('animate-spin');
+                syncText.textContent = 'Sync Conversations';
+            });
+        });
+    }
+});
+
+// Transcript Modal Controller
+function openTranscriptModal(convPk) {
+    const modal = document.getElementById('transcriptModal');
+    const chatBody = document.getElementById('modalChatBody');
+    const evalBadge = document.getElementById('modalEvalBadge');
+    const convSub = document.getElementById('modalConvSub');
+    const timeEl = document.getElementById('modalTime');
+
+    modal.classList.remove('hidden');
+    chatBody.innerHTML = '<div class="text-center py-10 text-slate-400 flex items-center justify-center gap-2"><iconify-icon icon="lucide:loader-2" class="animate-spin text-xl text-cyan-500"></iconify-icon><span>Loading transcript...</span></div>';
+
+    fetch('/dashboard/conversations/' + convPk + '/transcript/')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                evalBadge.textContent = data.evaluation || 'Done';
+                if ((data.evaluation || '').toLowerCase() === 'success') {
+                    evalBadge.className = 'text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30';
+                } else if ((data.evaluation || '').toLowerCase() === 'failure') {
+                    evalBadge.className = 'text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-rose-500/10 text-rose-500 border border-rose-500/30';
+                } else {
+                    evalBadge.className = 'text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-slate-100 dark:bg-navy-800 text-slate-500 border border-slate-300';
+                }
+
+                convSub.textContent = data.conversation_id + ' • ' + data.duration + ' • Agent: ' + (data.agent_id || 'Default');
+                timeEl.textContent = 'Initiated: ' + data.call_timestamp;
+
+                const msgs = data.messages || [];
+                if (msgs.length === 0) {
+                    chatBody.innerHTML = '<div class="text-center py-12 text-slate-400">No transcript turns recorded for this conversation.</div>';
+                    return;
+                }
+
+                let html = '';
+                msgs.forEach(m => {
+                    const isAgent = m.role === 'agent';
+                    const timeSecs = m.time_in_call_secs !== undefined ? m.time_in_call_secs + 's' : '';
+                    if (isAgent) {
+                        html += `
+                        <div class="flex items-start gap-2.5 max-w-[85%]">
+                            <div class="w-7 h-7 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-navy-cyan flex-shrink-0 text-sm">
+                                <iconify-icon icon="lucide:bot"></iconify-icon>
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-bold text-[11px] text-cyan-600 dark:text-navy-cyan">AI Agent</span>
+                                    <span class="text-[10px] text-slate-400 font-mono">${timeSecs}</span>
+                                </div>
+                                <div class="p-3 rounded-2xl rounded-tl-none bg-slate-100 dark:bg-navy-800 text-slate-800 dark:text-slate-100 font-sans leading-relaxed shadow-sm">
+                                    ${escapeHtml(m.message || '')}
+                                </div>
+                            </div>
+                        </div>`;
+                    } else {
+                        html += `
+                        <div class="flex items-start justify-end gap-2.5 w-full">
+                            <div class="flex flex-col items-end space-y-1 max-w-[85%]">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] text-slate-400 font-mono">${timeSecs}</span>
+                                    <span class="font-bold text-[11px] text-slate-600 dark:text-slate-300">${escapeHtml(data.caller_name || 'Caller')}</span>
+                                </div>
+                                <div class="p-3 rounded-2xl rounded-tr-none bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-sans leading-relaxed shadow-sm">
+                                    ${escapeHtml(m.message || '')}
+                                </div>
+                            </div>
+                            <div class="w-7 h-7 rounded-xl bg-slate-200 dark:bg-navy-700 flex items-center justify-center text-slate-600 dark:text-slate-200 flex-shrink-0 text-sm">
+                                <iconify-icon icon="lucide:user"></iconify-icon>
+                            </div>
+                        </div>`;
+                    }
+                });
+
+                chatBody.innerHTML = html;
+            } else {
+                chatBody.innerHTML = '<div class="text-center py-8 text-rose-500 font-medium">Failed to load transcript: ' + (data.message || 'Unknown error') + '</div>';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            chatBody.innerHTML = '<div class="text-center py-8 text-rose-500 font-medium">Network error while fetching transcript.</div>';
+        });
+}
+
+function closeTranscriptModal() {
+    document.getElementById('transcriptModal').classList.add('hidden');
+}
+
+function escapeHtml(text) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+</script>
+{% endblock %}

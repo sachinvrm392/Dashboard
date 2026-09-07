@@ -92,6 +92,16 @@
         </a>
         {% endif %}
 
+        <!-- Call Conversations Menu Link -->
+        <a href="{% if request.user.is_super_admin %}{% url 'admin_panel:conversations' %}{% else %}{% url 'dashboard:conversations' %}{% endif %}" 
+            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'conversations' or active_nav == 'conversations' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-all shadow-sm">
+            <div class="flex items-center gap-2.5">
+                <iconify-icon icon="lucide:phone-call" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                <span>Call Conversations</span>
+            </div>
+            <span class="text-[10px] text-slate-400 dark:text-navy-muted font-mono">Live</span>
+        </a>
+
         <!-- User Profile Menu Link -->
         <a href="{% url 'admin_panel:profile' %}" 
             class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'profile' or active_nav == 'profile' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-colors">
