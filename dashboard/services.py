@@ -1,3 +1,4 @@
+import math
 import requests
 import logging
 from django.core.cache import cache
@@ -197,14 +198,17 @@ class ElevenLabsService:
                 eval_val = (detail.get('analysis') or {}).get('call_successful') or detail.get('status')
             evaluation = str(eval_val).capitalize() if eval_val else (conv_summary.get('status', '').capitalize() or 'Unknown')
 
-            # 4. Duration
+            # 4. Duration (raw seconds from API)
             duration = int(conv_summary.get('call_duration_secs') or meta.get('call_duration_secs') or 0)
 
             # 5. Messages
             transcript = (detail.get('transcript', [])) if detail else []
 
-            # 6. Conversation Cost
-            cost = float(meta.get('cost', 0))
+            # 6. Conversation Cost (integer truncation)
+            if float(bp.cost_per_minute or 0) > 0:
+                cost = float(int((duration / 60.0) * float(bp.cost_per_minute)))
+            else:
+                cost = float(int(float(meta.get('cost', 0))))
 
             # 7. Credits (LLM)
             credits_llm = float(charging.get('llm_charge', 0))

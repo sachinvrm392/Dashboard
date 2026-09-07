@@ -10,6 +10,7 @@ from .forms import BPCreateForm, BPUpdateForm, UserProfileForm, BPResetPasswordF
 from django.contrib.auth.decorators import login_required
 
 import json
+import math
 from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Sum, Q
@@ -651,8 +652,33 @@ def admin_conversations(request):
         total_llm=Sum('credits_llm')
     )
     total_duration_secs = aggregates['total_duration'] or 0
-    total_cost = aggregates['total_cost'] or 0.0
     total_llm = aggregates['total_llm'] or 0.0
+
+    if selected_bp and selected_bp.cost_per_minute and selected_bp.cost_per_minute > 0:
+        total_cost = int((total_duration_secs / 60.0) * float(selected_bp.cost_per_minute))
+    else:
+        total_cost = sum(conv.calculated_cost for conv in qs)
+
+    # Credit Balance metrics
+    if selected_bp:
+        has_managed_credits = selected_bp.credit_transactions.exists()
+        ledger_credits = selected_bp.get_ledger_credits()
+        if has_managed_credits:
+            bp_total_credits = int(ledger_credits)
+        elif selected_bp.available_credit_balance and selected_bp.available_credit_balance > 0:
+            bp_total_credits = int(float(selected_bp.available_credit_balance))
+        else:
+            bp_total_credits = int(selected_bp.credit_alert_threshold or 10000)
+    else:
+        active_bps = BusinessPartner.objects.filter(is_deleted=False)
+        bp_total_credits = sum(
+            int(b.get_ledger_credits()) if b.credit_transactions.exists()
+            else int(float(b.available_credit_balance or b.credit_alert_threshold or 10000))
+            for b in active_bps
+        )
+
+    bp_consumed_credits = int(total_cost)
+    bp_remaining_credits = max(0, bp_total_credits - bp_consumed_credits)
 
     from dashboard.views import format_total_duration
 
@@ -675,6 +701,9 @@ def admin_conversations(request):
         'total_duration_formatted': format_total_duration(total_duration_secs),
         'total_cost': total_cost,
         'total_llm': total_llm,
+        'bp_total_credits': bp_total_credits,
+        'bp_consumed_credits': bp_consumed_credits,
+        'bp_remaining_credits': bp_remaining_credits,
         'q': q,
         'eval_filter': eval_filter,
         'is_admin_view': True,

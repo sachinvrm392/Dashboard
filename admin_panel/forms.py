@@ -25,7 +25,8 @@ class BPCreateForm(forms.ModelForm):
         model = BusinessPartner
         fields = [
             'company_name', 'contact_person', 'email', 'phone', 
-            'address', 'logo', 'elevenlabs_api_key', 'elevenlabs_agent_id', 'credit_alert_threshold'
+            'address', 'logo', 'elevenlabs_api_key', 'elevenlabs_agent_id',
+            'available_credit_balance', 'cost_per_minute', 'credit_alert_threshold'
         ]
         error_messages = {
             'company_name': {'required': 'Company name is required.'},
@@ -128,7 +129,8 @@ class BPUpdateForm(forms.ModelForm):
         model = BusinessPartner
         fields = [
             'company_name', 'contact_person', 'email', 'phone', 
-            'address', 'logo', 'elevenlabs_api_key', 'elevenlabs_agent_id', 'credit_alert_threshold'
+            'address', 'logo', 'elevenlabs_api_key', 'elevenlabs_agent_id',
+            'available_credit_balance', 'cost_per_minute', 'credit_alert_threshold'
         ]
         error_messages = {
             'company_name': {'required': 'Company name is required.'},

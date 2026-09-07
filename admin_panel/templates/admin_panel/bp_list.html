@@ -200,6 +200,8 @@
                         <th class="py-3 px-5">Contact Details</th>
                         <th class="py-3 px-5">Status</th>
                         <th class="py-3 px-5">Credit Limit</th>
+                        <th class="py-3 px-5">Avail. Balance</th>
+                        <th class="py-3 px-5">Cost/Min</th>
                         <th class="py-3 px-5">Quota Consumed</th>
                         <th class="py-3 px-5">Remaining</th>
                         <th class="py-3 px-5 min-w-[130px]">Usage %</th>
@@ -268,6 +270,16 @@
                         <td class="py-3.5 px-5">
                             <span class="font-mono text-cyan-600 dark:text-navy-cyan font-bold text-xs">{{ data.bp.credit_alert_threshold }}</span>
                             <span class="text-[10px] text-slate-400 dark:text-navy-muted block">credits</span>
+                        </td>
+
+                        <!-- Available Balance -->
+                        <td class="py-3.5 px-5">
+                            <span class="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-xs">{{ data.bp.available_credit_balance|floatformat:2 }}</span>
+                        </td>
+
+                        <!-- Cost/Min -->
+                        <td class="py-3.5 px-5">
+                            <span class="font-mono text-amber-500 dark:text-amber-400 font-bold text-xs">{{ data.bp.cost_per_minute|floatformat:2 }}</span>
                         </td>
 
                         <!-- Quota Consumed & Remaining -->
@@ -352,7 +364,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="py-14 text-center text-slate-400 dark:text-navy-muted">
+                        <td colspan="11" class="py-14 text-center text-slate-400 dark:text-navy-muted">
                             <div class="max-w-md mx-auto space-y-3">
                                 <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-navy-900 border border-slate-200 dark:border-navy-border flex items-center justify-center mx-auto text-slate-400 dark:text-navy-muted">
                                     <iconify-icon icon="lucide:users" class="text-2xl"></iconify-icon>

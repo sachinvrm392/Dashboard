@@ -105,3 +105,24 @@ class CallConversationTestCase(TestCase):
         self.assertTrue(data['success'])
         self.assertEqual(len(data['messages']), 2)
         self.assertEqual(data['messages'][0]['role'], 'agent')
+
+    def test_cost_per_minute_calculation(self):
+        # Without cost_per_minute set (default 0), calculated_cost uses raw conversation_cost
+        self.assertEqual(self.c1.calculated_cost, 4977.0)
+
+        # Set cost_per_minute on BP to 10.0
+        self.bp.cost_per_minute = 10.0
+        self.bp.save()
+
+        # Refresh from DB
+        self.c1.refresh_from_db()
+        # duration = 277 seconds -> int((277 / 60.0) * 10) = int(46.1666) = 46
+        self.assertEqual(self.c1.calculated_cost, 46)
+
+        # Verify BP conversation view shows the updated total cost using cost_per_minute
+        client = Client()
+        client.force_login(self.bp_user)
+        res = client.get(reverse('dashboard:conversations'))
+        self.assertEqual(res.status_code, 200)
+        # Total duration = 277 + 45 = 322 seconds -> int((322 / 60.0) * 10) = int(53.666) = 53
+        self.assertContains(res, '53')

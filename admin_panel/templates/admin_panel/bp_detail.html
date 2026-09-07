@@ -93,6 +93,20 @@
                         <span>Agent ID: <strong class="text-cyan-600 dark:text-navy-cyan">{{ bp.elevenlabs_agent_id }}</strong></span>
                     </span>
                     {% endif %}
+                    {% if bp.available_credit_balance %}
+                    <span>&bull;</span>
+                    <span class="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                        <iconify-icon icon="lucide:wallet" class="text-xs text-emerald-500"></iconify-icon>
+                        <span>Balance: <strong class="text-emerald-600 dark:text-emerald-400">{{ bp.available_credit_balance|floatformat:2 }}</strong></span>
+                    </span>
+                    {% endif %}
+                    {% if bp.cost_per_minute %}
+                    <span>&bull;</span>
+                    <span class="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                        <iconify-icon icon="lucide:clock" class="text-xs text-amber-500"></iconify-icon>
+                        <span>Cost/Min: <strong class="text-amber-500">{{ bp.cost_per_minute|floatformat:2 }}</strong></span>
+                    </span>
+                    {% endif %}
                     <span>&bull;</span>
                     <span class="inline-flex items-center gap-1.5">
                         {% if bp.elevenlabs_api_key and not api_error %}

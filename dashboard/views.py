@@ -1,4 +1,5 @@
 import json
+import math
 import hashlib
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
@@ -236,8 +237,26 @@ def bp_conversations(request):
         total_llm=Sum('credits_llm')
     )
     total_duration_secs = aggregates['total_duration'] or 0
-    total_cost = aggregates['total_cost'] or 0.0
     total_llm = aggregates['total_llm'] or 0.0
+
+    if bp.cost_per_minute and bp.cost_per_minute > 0:
+        total_cost = int((total_duration_secs / 60.0) * float(bp.cost_per_minute))
+    else:
+        total_cost = int(aggregates['total_cost'] or 0.0)
+
+    # Credit Balance metrics
+    has_managed_credits = bp.credit_transactions.exists()
+    ledger_credits = bp.get_ledger_credits()
+
+    if has_managed_credits:
+        bp_total_credits = int(ledger_credits)
+    elif bp.available_credit_balance and bp.available_credit_balance > 0:
+        bp_total_credits = int(float(bp.available_credit_balance))
+    else:
+        bp_total_credits = int(bp.credit_alert_threshold or 10000)
+
+    bp_consumed_credits = int(total_cost)
+    bp_remaining_credits = max(0, bp_total_credits - bp_consumed_credits)
 
     # Pagination: 15 per page
     paginator = Paginator(qs, 15)
@@ -256,6 +275,9 @@ def bp_conversations(request):
         'total_duration_formatted': format_total_duration(total_duration_secs),
         'total_cost': total_cost,
         'total_llm': total_llm,
+        'bp_total_credits': bp_total_credits,
+        'bp_consumed_credits': bp_consumed_credits,
+        'bp_remaining_credits': bp_remaining_credits,
         'q': q,
         'eval_filter': eval_filter,
         'active_nav': 'conversations',

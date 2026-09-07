@@ -1,3 +1,4 @@
+import math
 from django.db import models
 from django.utils import timezone
 from accounts.models import BusinessPartner
@@ -85,14 +86,35 @@ class CallConversation(models.Model):
         mins = self.duration // 60
         secs = self.duration % 60
         if mins > 0:
-            return f"{mins}m {secs}s"
+            if secs > 0:
+                return f"{mins}m {secs}s"
+            return f"{mins}m"
         return f"{secs}s"
+
+    @property
+    def calculated_cost(self):
+        """
+        Returns the call conversation cost as an integer.
+        If the associated BusinessPartner has a non-zero cost_per_minute set,
+        calculates cost as int((duration in seconds / 60.0) * cost_per_minute).
+        Otherwise falls back to int(conversation_cost) from ElevenLabs API.
+        """
+        if self.business_partner and self.business_partner.cost_per_minute and self.business_partner.cost_per_minute > 0:
+            return int((self.duration / 60.0) * float(self.business_partner.cost_per_minute))
+        return int(self.conversation_cost)
 
     @property
     def message_count(self):
         if isinstance(self.messages, list):
             return len(self.messages)
         return 0
+
+    def save(self, *args, **kwargs):
+        if self.business_partner and self.business_partner.cost_per_minute and self.business_partner.cost_per_minute > 0:
+            self.conversation_cost = float(int((self.duration / 60.0) * float(self.business_partner.cost_per_minute)))
+        elif self.conversation_cost:
+            self.conversation_cost = float(int(self.conversation_cost))
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.conversation_id} ({self.business_partner.company_name}) - {self.duration_formatted}"

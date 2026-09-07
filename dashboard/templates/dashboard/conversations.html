@@ -102,7 +102,9 @@
             <div class="flex items-start justify-between">
                 <div>
                     <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Total Cost</span>
-                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Gross ElevenLabs Credits</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">
+                        {% if bp and bp.cost_per_minute > 0 %}Rate: {{ bp.cost_per_minute|floatformat:2 }}/min{% elif selected_bp and selected_bp.cost_per_minute > 0 %}Rate: {{ selected_bp.cost_per_minute|floatformat:2 }}/min{% else %}Gross ElevenLabs Credits{% endif %}
+                    </span>
                 </div>
                 <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
                     <iconify-icon icon="lucide:coins" class="text-lg"></iconify-icon>
@@ -114,29 +116,31 @@
                 </div>
                 <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
                     <span>Category</span>
-                    <span class="font-mono font-medium text-amber-500">Voice &amp; Platform</span>
+                    <span class="font-mono font-medium text-amber-500">
+                        {% if bp and bp.cost_per_minute > 0 %}BP Per-Min Rate{% elif selected_bp and selected_bp.cost_per_minute > 0 %}BP Per-Min Rate{% else %}Voice &amp; Platform{% endif %}
+                    </span>
                 </div>
             </div>
         </div>
 
-        <!-- Total LLM Credits Card -->
+        <!-- Credit Balance Card -->
         <div class="p-5 rounded-2xl border border-slate-200 dark:border-navy-border bg-white dark:bg-[#161730] shadow-sm flex flex-col justify-between">
             <div class="flex items-start justify-between">
                 <div>
-                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Credits (LLM)</span>
-                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">AI Model Generation</span>
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-navy-muted uppercase tracking-wider block">Credit Balance</span>
+                    <span class="text-[11px] text-slate-400 dark:text-navy-muted mt-0.5 block">Available Quota Balance</span>
                 </div>
                 <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                    <iconify-icon icon="lucide:sparkles" class="text-lg"></iconify-icon>
+                    <iconify-icon icon="lucide:wallet" class="text-lg"></iconify-icon>
                 </div>
             </div>
             <div class="mt-4">
                 <div class="text-2xl sm:text-3xl font-bold font-mono text-emerald-600 dark:text-emerald-400 tracking-tight">
-                    {{ total_llm|floatformat:0|intcomma }}
+                    {{ bp_remaining_credits|floatformat:0|intcomma }}
                 </div>
                 <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-navy-border/60 flex items-center justify-between text-[11px] text-slate-500 dark:text-navy-muted">
-                    <span>Inference Tokens</span>
-                    <span class="font-mono font-medium text-emerald-500">LLM Charge</span>
+                    <span>Total: <strong class="font-mono text-slate-700 dark:text-slate-300">{{ bp_total_credits|floatformat:0|intcomma }}</strong></span>
+                    <span>Consumed: <strong class="font-mono text-amber-500">{{ bp_consumed_credits|floatformat:0|intcomma }}</strong></span>
                 </div>
             </div>
         </div>
@@ -283,8 +287,8 @@
                         </td>
 
                         <!-- Conversation Cost -->
-                        <td class="py-3 px-3 text-right font-semibold text-amber-600 dark:text-amber-400">
-                            {{ conv.conversation_cost|floatformat:0|intcomma }}
+                        <td class="py-3 px-3 text-right font-semibold text-amber-600 dark:text-amber-400 font-mono">
+                            {{ conv.calculated_cost|floatformat:0|intcomma }}
                         </td>
 
                         <!-- Credits (LLM) -->
