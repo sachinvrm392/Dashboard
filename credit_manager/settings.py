@@ -41,13 +41,23 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+]
+
+try:
+    import whitenoise
+    MIDDLEWARE.append('whitenoise.middleware.WhiteNoiseMiddleware')
+except ImportError:
+    pass
+
+MIDDLEWARE.extend([
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
+])
+
 
 ROOT_URLCONF = 'credit_manager.urls'
 
@@ -70,11 +80,26 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'credit_manager.wsgi.application'
 
-# Database
+# Database configuration
+# On Vercel serverless platform, the main filesystem is read-only.
+# Store SQLite in /tmp/db.sqlite3 where writes are permitted.
+import shutil
+
+if os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'):
+    db_path = Path('/tmp/db.sqlite3')
+    repo_db = BASE_DIR / 'db.sqlite3'
+    if not db_path.exists() and repo_db.exists():
+        try:
+            shutil.copy2(repo_db, db_path)
+        except Exception:
+            pass
+else:
+    db_path = BASE_DIR / 'db.sqlite3'
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': db_path,
         'OPTIONS': {
             'timeout': 30,
         },
@@ -99,6 +124,8 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+
 
 # Media files
 MEDIA_URL = '/media/'
