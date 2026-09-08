@@ -9,10 +9,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-secret-key')
+SECRET_KEY = (os.getenv('SECRET_KEY') or '').strip() or 'django-insecure-default-secret-key-crm-2026-production'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
+DEBUG = (os.getenv('DEBUG') or 'True').lower() in ('true', '1', 't')
+
 
 ALLOWED_HOSTS = ['*']
 
