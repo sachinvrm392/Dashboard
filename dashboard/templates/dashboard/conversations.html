@@ -157,7 +157,7 @@
             <!-- Keyword Search -->
             <div class="relative w-full md:w-96">
                 <iconify-icon icon="lucide:search" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-navy-muted text-base"></iconify-icon>
-                <input type="text" name="q" value="{{ q }}" placeholder="Search ID, Caller/Called #, SID, Agent, Name..."
+                <input type="text" name="q" value="{{ q }}" placeholder="{% if is_admin_view %}Search ID, Caller/Called #, SID, Agent, Name...{% else %}Search Conversation ID...{% endif %}"
                     class="w-full pl-10 pr-4 py-2 rounded-xl text-xs bg-slate-50 dark:bg-navy-800 border border-slate-200 dark:border-navy-border text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-navy-muted focus:outline-none focus:ring-1 focus:ring-cyan-500">
             </div>
 
@@ -207,15 +207,15 @@
                         <th class="py-3 px-3">Conversation ID</th>
                         {% if is_admin_view %}<th class="py-3 px-3">Partner</th>{% endif %}
                         <th class="py-3 px-3">Call Timestamp</th>
-                        <th class="py-3 px-3">Agent ID</th>
+                        {% if is_admin_view %}<th class="py-3 px-3">Agent ID</th>{% endif %}
                         <th class="py-3 px-3 text-center">Evaluation</th>
                         <th class="py-3 px-3 text-right">Duration</th>
                         <th class="py-3 px-3 text-center">Messages</th>
-                        <th class="py-3 px-3 text-right">Cost</th>
-                        <th class="py-3 px-3 text-right">Credits (LLM)</th>
-                        <th class="py-3 px-3">Caller / Called</th>
-                        <th class="py-3 px-3">Call SID</th>
-                        <th class="py-3 px-3">Caller Name</th>
+                        {% if is_admin_view %}<th class="py-3 px-3 text-right">Cost</th>{% endif %}
+                        {% if is_admin_view %}<th class="py-3 px-3 text-right">Credits (LLM)</th>{% endif %}
+                        {% if is_admin_view %}<th class="py-3 px-3">Caller / Called</th>{% endif %}
+                        {% if is_admin_view %}<th class="py-3 px-3">Call SID</th>{% endif %}
+                        {% if is_admin_view %}<th class="py-3 px-3">Caller Name</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-navy-border/40 font-mono">
@@ -248,10 +248,12 @@
                             <span class="text-slate-400 dark:text-navy-muted block text-[10px] font-mono">{{ conv.call_timestamp|date:"H:i:s e" }}</span>
                         </td>
 
+                        {% if is_admin_view %}
                         <!-- Agent ID -->
                         <td class="py-3 px-3 text-slate-600 dark:text-slate-300 text-[11px]" title="{{ conv.agent_id }}">
                             {{ conv.agent_id|default:"-"|truncatechars:14 }}
                         </td>
+                        {% endif %}
 
                         <!-- Evaluation -->
                         <td class="py-3 px-3 text-center">
@@ -286,6 +288,7 @@
                             </button>
                         </td>
 
+                        {% if is_admin_view %}
                         <!-- Conversation Cost -->
                         <td class="py-3 px-3 text-right font-semibold text-amber-600 dark:text-amber-400 font-mono">
                             {{ conv.calculated_cost|floatformat:0|intcomma }}
@@ -315,6 +318,7 @@
                         <td class="py-3 px-3 text-slate-700 dark:text-slate-200 font-sans text-xs">
                             {{ conv.caller_name|default:"-" }}
                         </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>

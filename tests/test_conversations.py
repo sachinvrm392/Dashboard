@@ -80,11 +80,11 @@ class CallConversationTestCase(TestCase):
         self.assertContains(res, 'conv_test_001')
         self.assertContains(res, 'conv_test_002')
         self.assertContains(res, '4m 37s')
-        self.assertContains(res, 'John Doe')
+        self.assertNotContains(res, 'John Doe')
         self.assertContains(res, 'Sync Conversations')
 
         # Test search filter
-        res_search = client.get(reverse('dashboard:conversations') + '?q=Jane')
+        res_search = client.get(reverse('dashboard:conversations') + '?q=conv_test_002')
         self.assertContains(res_search, 'conv_test_002')
         self.assertNotContains(res_search, 'conv_test_001')
 
@@ -95,6 +95,7 @@ class CallConversationTestCase(TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, 'conv_test_001')
         self.assertContains(res, 'Cardano Call Center')
+        self.assertContains(res, 'John Doe')
 
     def test_transcript_api(self):
         client = Client()
