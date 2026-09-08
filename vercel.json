@@ -1,4 +1,4 @@
-﻿{
+{
   "version": 2,
   "builds": [
     {
@@ -12,8 +12,9 @@
       "dest": "/static/$1"
     },
     {
-      "src": "(.*)",
-      "dest": "credit_manager/wsgi.py"
+      "src": "/(.*)",
+      "dest": "/credit_manager/wsgi.py"
     }
   ]
 }
+
