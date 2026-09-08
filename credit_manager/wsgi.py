@@ -16,18 +16,21 @@ if os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'):
     try:
         from pathlib import Path
         import shutil
+        import sys
         base_dir = Path(__file__).resolve().parent.parent
         repo_db = base_dir / 'db.sqlite3'
         tmp_db = Path('/tmp/db.sqlite3')
         if repo_db.exists():
-            shutil.copy2(repo_db, tmp_db)
+            if not tmp_db.exists() or tmp_db.stat().st_size != repo_db.stat().st_size:
+                shutil.copyfile(repo_db, tmp_db)
         from django.core.management import call_command
         from django.db import connection
         tables = connection.introspection.table_names()
         if 'accounts_user' not in tables:
             call_command('migrate', interactive=False)
     except Exception as err:
-        print("Vercel database copy status:", err)
+        print(f"[VERCEL WSGI DB COPY ERROR]: {err}", file=sys.stderr)
+
 
 
 

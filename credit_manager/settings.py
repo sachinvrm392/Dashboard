@@ -87,15 +87,17 @@ WSGI_APPLICATION = 'credit_manager.wsgi.application'
 # On Vercel serverless platform, the main filesystem is read-only.
 # Store SQLite in /tmp/db.sqlite3 where writes are permitted.
 import shutil
+import sys
 
 if os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'):
     db_path = Path('/tmp/db.sqlite3')
     repo_db = BASE_DIR / 'db.sqlite3'
     if repo_db.exists():
         try:
-            shutil.copy2(repo_db, db_path)
-        except Exception:
-            pass
+            if not db_path.exists() or db_path.stat().st_size != repo_db.stat().st_size:
+                shutil.copyfile(repo_db, db_path)
+        except Exception as e:
+            print(f"[VERCEL DB COPY ERROR]: {e}", file=sys.stderr)
 else:
     db_path = BASE_DIR / 'db.sqlite3'
 
