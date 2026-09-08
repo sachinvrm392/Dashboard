@@ -153,6 +153,14 @@ CACHES = {
     }
 }
 
+# Session Engine Configuration for Vercel Serverless Platform
+if os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'):
+    SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+
+
 # Email Configuration
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com') or 'smtp.gmail.com'
 email_port_raw = os.getenv('EMAIL_PORT', '587')
