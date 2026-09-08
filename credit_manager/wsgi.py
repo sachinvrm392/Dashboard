@@ -11,7 +11,7 @@ application = get_wsgi_application()
 app = application
 
 
-# Automatic database setup for Vercel serverless functions
+# Automatic database setup and seeding for Vercel serverless functions
 if os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'):
     try:
         from django.core.management import call_command
@@ -19,12 +19,10 @@ if os.getenv('VERCEL') or os.getenv('AWS_LAMBDA_FUNCTION_NAME'):
         tables = connection.introspection.table_names()
         if 'accounts_user' not in tables:
             call_command('migrate', interactive=False)
-            from accounts.models import User
-            if not User.objects.filter(role='SUPER_ADMIN').exists():
-                admin_user = User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
-                admin_user.role = User.Role.SUPER_ADMIN
-                admin_user.save()
+        from accounts.seed import seed_initial_data
+        seed_initial_data()
     except Exception as err:
         print("Vercel auto-migration status:", err)
+
 
 
