@@ -124,9 +124,13 @@ CACHES = {
 }
 
 # Email Configuration
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com') or 'smtp.gmail.com'
+email_port_raw = os.getenv('EMAIL_PORT', '587')
+try:
+    EMAIL_PORT = int(email_port_raw.strip()) if email_port_raw and email_port_raw.strip() else 587
+except (ValueError, TypeError):
+    EMAIL_PORT = 587
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 't')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '') or EMAIL_HOST_USER
