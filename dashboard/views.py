@@ -54,15 +54,15 @@ def bp_dashboard(request):
                 character_limit = subscription_info.get('character_limit', character_limit)
                 character_count = subscription_info.get('character_count', character_count)
 
-    # In Managed Credit Mode:
-    # - Total credits is strictly net ledger credits
-    # - Consumed credits is assumed 0 (per user specifications until call-duration deduction is implemented)
+    # Consumed credits calculated from CallConversation history
+    call_consumed = bp.get_call_consumed()
+
     if has_managed_credits:
         effective_character_limit = max(0, ledger_credits)
-        effective_character_count = 0
+        effective_character_count = call_consumed
     else:
         effective_character_limit = character_limit + ledger_credits if ledger_credits else character_limit
-        effective_character_count = character_count
+        effective_character_count = call_consumed if call_consumed > 0 else character_count
 
     # Record or update today's snapshot
     today = timezone.localdate()
@@ -163,12 +163,13 @@ def refresh_credits(request):
             return JsonResponse({'error': subscription_info.get('message')}, status=400)
             
         has_managed_credits = bp.credit_transactions.exists()
+        call_consumed = bp.get_call_consumed()
         if has_managed_credits:
             character_limit = max(0, bp.get_ledger_credits())
-            character_count = 0
+            character_count = call_consumed
         else:
             character_limit = subscription_info.get('character_limit', 0)
-            character_count = subscription_info.get('character_count', 0)
+            character_count = call_consumed if call_consumed > 0 else subscription_info.get('character_count', 0)
             
         remaining = max(0, character_limit - character_count)
         usage_percentage = round((character_count / character_limit * 100), 1) if character_limit else 0

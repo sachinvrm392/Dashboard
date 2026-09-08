@@ -44,6 +44,18 @@ class BusinessPartner(models.Model):
         positive = sum(t.amount for t in txs if t.transaction_type in ['ALLOCATION', 'TOP_UP', 'BONUS'])
         negative = sum(t.amount for t in txs if t.transaction_type == 'DEDUCTION')
         return positive - negative
+
+    def get_call_consumed(self):
+        """Calculate total consumed credit cost from all call conversations for this partner."""
+        if hasattr(self, 'call_conversations'):
+            convs = self.call_conversations.all()
+            if not convs.exists():
+                return 0
+            if self.cost_per_minute and self.cost_per_minute > 0:
+                total_dur = sum(c.duration for c in convs)
+                return int((total_dur / 60.0) * float(self.cost_per_minute))
+            return sum(c.calculated_cost for c in convs)
+        return 0
     
     class Meta:
         ordering = ['-created_at']

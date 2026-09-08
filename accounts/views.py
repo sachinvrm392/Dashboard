@@ -51,3 +51,36 @@ class ChangePasswordView(PasswordChangeView):
         self.request.user.must_change_password = False
         self.request.user.save()
         return response
+
+
+from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.db.models import Q
+from django.shortcuts import render
+
+User = get_user_model()
+
+def reset_password_view(request):
+    """
+    Self-service password reset view for Business Partners and Users.
+    Allows specifying username or email to update password directly.
+    """
+    if request.method == 'POST':
+        identity = request.POST.get('identity', '').strip()
+        new_password = request.POST.get('new_password', '').strip()
+        
+        if not identity or not new_password:
+            return render(request, 'accounts/reset_password.html', {'error': 'Please fill in all required fields.'})
+            
+        user = User.objects.filter(Q(username__iexact=identity) | Q(email__iexact=identity)).first()
+        if not user:
+            return render(request, 'accounts/reset_password.html', {'error': 'No matching account found for the provided username or email.'})
+            
+        user.set_password(new_password)
+        user.must_change_password = False
+        user.save()
+        
+        messages.success(request, f"Password for account '@{user.username}' updated successfully. Please sign in with your new password.")
+        return redirect('accounts:login')
+        
+    return render(request, 'accounts/reset_password.html')

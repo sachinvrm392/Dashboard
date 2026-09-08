@@ -44,11 +44,12 @@ def admin_dashboard(request):
             'character_count': 0,
         }
         
+        call_consumed = bp.get_call_consumed()
         if has_managed:
             char_limit = max(0, bp.get_ledger_credits())
-            char_count = 0
+            char_count = call_consumed
             bp_info['remaining'] = max(0, char_limit - char_count)
-            bp_info['usage_percentage'] = 0.0
+            bp_info['usage_percentage'] = round((char_count / char_limit * 100), 1) if char_limit else 0.0
             bp_info['character_limit'] = char_limit
             bp_info['character_count'] = char_count
             total_credits_used_all += char_count
@@ -66,7 +67,7 @@ def admin_dashboard(request):
                 if not credit_info.get('error'):
                     bp_info['credit_info'] = credit_info
                     char_limit = credit_info.get('character_limit', 0)
-                    char_count = credit_info.get('character_count', 0)
+                    char_count = call_consumed if call_consumed > 0 else credit_info.get('character_count', 0)
                     remaining = max(0, char_limit - char_count)
                     usage_pct = round((char_count / char_limit * 100), 1) if char_limit else 0
                     bp_info['remaining'] = remaining
@@ -167,9 +168,12 @@ def bp_list(request):
         }
         if has_managed:
             char_limit = max(0, bp.get_ledger_credits())
-            char_count = 0
+        call_consumed = bp.get_call_consumed()
+        if has_managed:
+            char_limit = max(0, bp.get_ledger_credits())
+            char_count = call_consumed
             bp_info['remaining'] = max(0, char_limit - char_count)
-            bp_info['usage_percentage'] = 0.0
+            bp_info['usage_percentage'] = round((char_count / char_limit * 100), 1) if char_limit else 0.0
             bp_info['character_limit'] = char_limit
             bp_info['character_count'] = char_count
             if bp.elevenlabs_api_key:
@@ -185,7 +189,7 @@ def bp_list(request):
                 if not credit_info.get('error'):
                     bp_info['credit_info'] = credit_info
                     char_limit = credit_info.get('character_limit', 0)
-                    char_count = credit_info.get('character_count', 0)
+                    char_count = call_consumed if call_consumed > 0 else credit_info.get('character_count', 0)
                     bp_info['remaining'] = max(0, char_limit - char_count)
                     bp_info['usage_percentage'] = round((char_count / char_limit * 100), 1) if char_limit else 0
                     bp_info['character_limit'] = char_limit
@@ -347,12 +351,13 @@ def bp_detail(request, pk):
                 character_count = credit_info.get('character_count', character_count)
             voices = ElevenLabsService.get_voices(api_key)
             
+    call_consumed = bp.get_call_consumed()
     if has_managed_credits:
         effective_character_limit = max(0, ledger_credits)
-        effective_character_count = 0
+        effective_character_count = call_consumed
     else:
         effective_character_limit = character_limit + ledger_credits if ledger_credits else character_limit
-        effective_character_count = character_count
+        effective_character_count = call_consumed if call_consumed > 0 else character_count
 
     # Record or update today's snapshot
     if is_live or has_managed_credits:

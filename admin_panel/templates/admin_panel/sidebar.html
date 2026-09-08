@@ -102,14 +102,14 @@
             <span class="text-[10px] text-slate-400 dark:text-navy-muted font-mono">Live</span>
         </a>
 
-        <!-- User Profile Menu Link -->
-        <a href="{% url 'admin_panel:profile' %}" 
-            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'profile' or active_nav == 'profile' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-colors">
+        <!-- Reset / Change Password Menu Link -->
+        <a href="{% url 'accounts:change_password' %}" 
+            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl {% if request.resolver_match.url_name == 'change_password' or active_nav == 'change_password' %}bg-cyan-500/10 dark:bg-navy-cyan/15 border border-cyan-500/30 dark:border-navy-cyan/30 text-cyan-600 dark:text-navy-cyan font-semibold{% else %}text-slate-600 dark:text-navy-muted hover:bg-slate-100 dark:hover:bg-navy-800/60 hover:text-slate-900 dark:hover:text-white font-medium{% endif %} text-xs transition-colors">
             <div class="flex items-center gap-2.5">
-                <iconify-icon icon="lucide:user-cog" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
-                <span>User Profile</span>
+                <iconify-icon icon="lucide:key-round" class="text-base text-cyan-600 dark:text-navy-cyan"></iconify-icon>
+                <span>Reset / Change Password</span>
             </div>
-            <span class="text-[10px] text-slate-400 dark:text-navy-muted font-mono">Edit</span>
+            <iconify-icon icon="lucide:shield-check" class="text-xs text-slate-400 dark:text-navy-muted"></iconify-icon>
         </a>
     </div>
 
